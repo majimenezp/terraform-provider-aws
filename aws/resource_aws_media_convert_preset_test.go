@@ -44,8 +44,52 @@ func testAccMediaConvertPresetConfig_Basic(rName string) string {
 	return fmt.Sprintf(`
 resource "aws_media_convert_preset" "test" {
   name = %[1]q
+  category = ""
   settings {
+	video_description {
+		scaling_behavior = "DEFAULT"
+		timecode_insertion = "DISABLED"
+		anti_alias = "ENABLED"
+		sharpness = 50
+		afd_signaling = "NONE"
+		drop_frame_timecode = "ENABLED"
+		respond_to_afd = "NONE"
+		color_metadata = "INSERT"
+		codec_settings {
+			codec = "H_264"
+			///https://docs.aws.amazon.com/sdk-for-go/api/service/mediaconvert/#H264Settings
+			h264_settings {
 
+			}
+		}
+	}
+	audio_description {
+		audio_type_control = "FOLLOW_INPUT"
+		audio_source_name = "Audio Selector 1"
+		language_code_control = "FOLLOW_INPUT"
+		codec_settings {
+			codec = "AAC"
+			aac_settings {
+				audio_description_broadcaster_mix = "NORMAL"
+				bitrate = 96000
+				rate_control_mode = "CBR"
+				coding_mode = "CODING_MODE_2_0"
+				raw_format = "NONE"
+				sample_rate = 48000
+				specification = "MPEG4"
+			}
+		}
+	}
+
+	container_settings {
+		container = "MP4"
+		mp4_settings {
+			cslg_atom = "INCLUDE"
+			ctts_version = 0
+			free_space_box = "EXCLUDE"
+			moov_placement = "PROGRESSIVE_DOWNLOAD"
+		}
+	}
   }
 }
 `, rName)
