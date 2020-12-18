@@ -38,6 +38,13 @@ func TestAccAwsMediaConvertPreset_base(t *testing.T) {
 			},
 		},
 	})
+	// testAccPreCheck(t)
+	// testAccPreCheckAWSMediaConvert(t)
+	// config := testAccMediaConvertPresetConfig_Basic(rName)
+	// fmt.Println(config)
+	// testAccCheckAwsMediaConvertPresetExists(resourceName, &preset)
+	// testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`preset/.+`))
+	// resource.TestCheckResourceAttr(resourceName, "category", rCategory)
 }
 
 func testAccMediaConvertPresetConfig_Basic(rName string) string {
@@ -57,9 +64,27 @@ resource "aws_media_convert_preset" "test" {
 		color_metadata = "INSERT"
 		codec_settings {
 			codec = "H_264"
-			///https://docs.aws.amazon.com/sdk-for-go/api/service/mediaconvert/#H264Settings
 			h264_settings {
-
+				interlace_mode = "PROGRESSIVE"
+				number_reference_frames = 3
+				syntax = "DEFAULT"
+				softness = 0
+				gop_closed_cadence = 1
+				gop_size = 90
+				slices = 1
+				gop_b_reference = "DISABLED"
+				max_bitrate = 5000000
+				slow_pal = "DISABLED"
+				spatial_adaptive_quantization = "ENABLED"
+				temporal_adaptive_quantization = "ENABLED"
+				flicker_adaptive_quantization = "DISABLED"
+				entropy_encoding = "CABAC"
+				framerate_control = "INITIALIZE_FROM_SOURCE"
+				rate_control_mode = "QVBR"
+				qvbr_settings {
+					qvbr_quality_level = 9
+					qvbr_quality_level_fine_tune = 0
+				}
 			}
 		}
 	}
@@ -67,6 +92,10 @@ resource "aws_media_convert_preset" "test" {
 		audio_type_control = "FOLLOW_INPUT"
 		audio_source_name = "Audio Selector 1"
 		language_code_control = "FOLLOW_INPUT"
+		afd_signaling = "NONE"
+		drop_frame_timecode = "ENABLED"
+		respond_to_afd = "NONE"
+		color_metadata = "INSERT"
 		codec_settings {
 			codec = "AAC"
 			aac_settings {
@@ -78,6 +107,21 @@ resource "aws_media_convert_preset" "test" {
 				sample_rate = 48000
 				specification = "MPEG4"
 			}
+			codec_profile = "MAIN"
+			telecine = "NONE"
+			min_i_interval = 0
+			adaptive_quantization = "HIGH"
+			codec_level = "AUTO"
+			field_encoding = "PAFF"
+			scene_change_detect = "ENABLED"
+			quality_tuning_level = "SINGLE_PASS"
+			framerate_conversion_algorithm = "DUPLICATE_DROP"
+			unregistered_sei_timecode = "DISABLED"
+			gop_size_units = "FRAMES"
+			par_control = "INITIALIZE_FROM_SOURCE"
+			number_b_frames_between_reference_frames = 2
+			repeat_pps = "DISABLED"
+			dynamic_sub_gop = "STATIC"
 		}
 	}
 

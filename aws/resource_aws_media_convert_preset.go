@@ -198,11 +198,13 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.AacAudioDescriptionBroadcasterMixBroadcasterMixedAd,
 																mediaconvert.AacAudioDescriptionBroadcasterMixNormal,
 															}, false),
+															Default: nil,
 														},
 														"bitrate": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(6000),
+															Default:      6000,
 														},
 														"codec_profile": {
 															Type:     schema.TypeString,
@@ -212,6 +214,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.AacCodecProfileHev1,
 																mediaconvert.AacCodecProfileHev2,
 															}, false),
+															Default: nil,
 														},
 														"coding_mode": {
 															Type:     schema.TypeString,
@@ -223,6 +226,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.AacCodingModeCodingMode20,
 																mediaconvert.AacCodingModeCodingMode51,
 															}, false),
+															Default: nil,
 														},
 														"rate_control_mode": {
 															Type:     schema.TypeString,
@@ -231,6 +235,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.AacRateControlModeCbr,
 																mediaconvert.AacRateControlModeVbr,
 															}, false),
+															Default: nil,
 														},
 														"raw_format": {
 															Type:     schema.TypeString,
@@ -239,11 +244,13 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.AacRawFormatLatmLoas,
 																mediaconvert.AacRawFormatNone,
 															}, false),
+															Default: nil,
 														},
 														"sample_rate": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(8000),
+															Default:      8000,
 														},
 														"specification": {
 															Type:     schema.TypeString,
@@ -252,6 +259,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.AacSpecificationMpeg2,
 																mediaconvert.AacSpecificationMpeg4,
 															}, false),
+															Default: nil,
 														},
 														"vbr_quality": {
 															Type:     schema.TypeString,
@@ -262,6 +270,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.AacVbrQualityMediumHigh,
 																mediaconvert.AacVbrQualityHigh,
 															}, false),
+															Default: nil,
 														},
 													},
 												},
@@ -273,6 +282,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(64000),
+															Default:      64000,
 														},
 														"bitstream_mode": {
 															Type:     schema.TypeString,
@@ -287,6 +297,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.Ac3BitstreamModeVisuallyImpaired,
 																mediaconvert.Ac3BitstreamModeVoiceOver,
 															}, false),
+															Default: nil,
 														},
 														"coding_mode": {
 															Type:     schema.TypeString,
@@ -297,11 +308,13 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.Ac3CodingModeCodingMode20,
 																mediaconvert.Ac3CodingModeCodingMode32Lfe,
 															}, false),
+															Default: nil,
 														},
 														"dialnorm": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"dynamic_range_compression_profile": {
 															Type:     schema.TypeString,
@@ -310,6 +323,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.Ac3DynamicRangeCompressionProfileFilmStandard,
 																mediaconvert.Ac3DynamicRangeCompressionProfileNone,
 															}, false),
+															Default: nil,
 														},
 														"lfe_filter": {
 															Type:     schema.TypeString,
@@ -318,6 +332,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.Ac3LfeFilterEnabled,
 																mediaconvert.Ac3LfeFilterDisabled,
 															}, false),
+															Default: nil,
 														},
 														"metadata_control": {
 															Type:     schema.TypeString,
@@ -326,32 +341,37 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																mediaconvert.Ac3MetadataControlFollowInput,
 																mediaconvert.Ac3MetadataControlUseConfigured,
 															}, false),
+															Default: nil,
 														},
 														"sample_rate": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(48000),
+															Default:      48000,
 														},
 													},
 												},
 												"aiff_settings": {
 													Type:     schema.TypeList,
-													Computed: true,
+													Optional: true,
 													Elem: map[string]*schema.Schema{
 														"bitdepth": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(16),
+															Default:      16,
 														},
 														"channels": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"sample_rate": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(8000),
+															Default:      8000,
 														},
 													},
 												},
@@ -363,6 +383,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(384000),
+															Default:      384000,
 														},
 														"bitstream_mode": {
 															Type:     schema.TypeString,
@@ -413,18 +434,22 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 														"lo_ro_center_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"lo_ro_surround_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"lt_rt_center_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"lt_rt_surround_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"metering_mode": {
 															Type:     schema.TypeString,
@@ -441,11 +466,13 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(48000),
+															Default:      48000,
 														},
 														"speech_threshold": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"stereo_downmix": {
 															Type:     schema.TypeString,
@@ -484,6 +511,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(64000),
+															Default:      64000,
 														},
 														"bitstream_mode": {
 															Type:     schema.TypeString,
@@ -517,6 +545,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"dynamic_range_compression_line": {
 															Type:     schema.TypeString,
@@ -561,18 +590,22 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 														"lo_ro_center_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"lo_ro_surround_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"lt_rt_center_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"lt_rt_surround_mix_level": {
 															Type:     schema.TypeFloat,
 															Optional: true,
+															Default:  0,
 														},
 														"metadata_control": {
 															Type:     schema.TypeString,
@@ -602,6 +635,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(48000),
+															Default:      48000,
 														},
 														"stereo_downmix": {
 															Type:     schema.TypeString,
@@ -641,16 +675,19 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(32000),
+															Default:      32000,
 														},
 														"channels": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"sample_rate": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(32000),
+															Default:      32000,
 														},
 													},
 												},
@@ -662,11 +699,13 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(16000),
+															Default:      16000,
 														},
 														"channels": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"rate_control_mode": {
 															Type:     schema.TypeString,
@@ -680,10 +719,12 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(22050),
+															Default:      22050,
 														},
 														"vbr_quality": {
 															Type:     schema.TypeInt,
 															Optional: true,
+															Default:  0,
 														},
 													},
 												},
@@ -695,16 +736,19 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(32000),
+															Default:      32000,
 														},
 														"channels": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"sample_rate": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(16000),
+															Default:      16000,
 														},
 													},
 												},
@@ -714,17 +758,19 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 													Elem: map[string]*schema.Schema{
 														"channels": {
 															Type:         schema.TypeInt,
-															Optional:     true,
+															Computed:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"sample_rate": {
 															Type:         schema.TypeInt,
-															Optional:     true,
+															Computed:     true,
 															ValidateFunc: validation.IntAtLeast(22050),
+															Default:      22050,
 														},
 														"vbr_quality": {
 															Type:     schema.TypeInt,
-															Optional: true,
+															Computed: true,
 														},
 													},
 												},
@@ -736,11 +782,13 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(16),
+															Default:      16,
 														},
 														"channels": {
 															Type:         schema.TypeInt,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(1),
+															Default:      1,
 														},
 														"format": {
 															Type:     schema.TypeString,
@@ -754,6 +802,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															Optional:     true,
 															Type:         schema.TypeInt,
 															ValidateFunc: validation.IntAtLeast(8000),
+															Default:      8000,
 														},
 													},
 												},
@@ -2080,7 +2129,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 													},
 												},
 												"h264_settings": {
-													///https://docs.aws.amazon.com/sdk-for-go/api/service/mediaconvert/#H264Settings
 													Type:     schema.TypeList,
 													Optional: true,
 													MaxItems: 1,
@@ -2103,6 +2151,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																Type:         schema.TypeInt,
 																Optional:     true,
 																ValidateFunc: validation.IntAtLeast(1000),
+																Default:      1000,
 															},
 															"codec_level": {
 																Type:     schema.TypeString,
