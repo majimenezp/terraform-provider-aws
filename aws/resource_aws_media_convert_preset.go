@@ -2,10 +2,13 @@ package aws
 
 import (
 	"fmt"
+	"log"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/mediaconvert"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/keyvaluetags"
 )
 
 func resourceAwsMediaConvertPreset() *schema.Resource {
@@ -44,7 +47,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"audio_description": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							MinItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
@@ -190,619 +193,639 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"aac_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"audio_description_broadcaster_mix": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.AacAudioDescriptionBroadcasterMixBroadcasterMixedAd,
-																mediaconvert.AacAudioDescriptionBroadcasterMixNormal,
-															}, false),
-															Default: nil,
-														},
-														"bitrate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(6000),
-															Default:      6000,
-														},
-														"codec_profile": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.AacCodecProfileLc,
-																mediaconvert.AacCodecProfileHev1,
-																mediaconvert.AacCodecProfileHev2,
-															}, false),
-															Default: nil,
-														},
-														"coding_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.AacCodingModeAdReceiverMix,
-																mediaconvert.AacCodingModeCodingMode10,
-																mediaconvert.AacCodingModeCodingMode11,
-																mediaconvert.AacCodingModeCodingMode20,
-																mediaconvert.AacCodingModeCodingMode51,
-															}, false),
-															Default: nil,
-														},
-														"rate_control_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.AacRateControlModeCbr,
-																mediaconvert.AacRateControlModeVbr,
-															}, false),
-															Default: nil,
-														},
-														"raw_format": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.AacRawFormatLatmLoas,
-																mediaconvert.AacRawFormatNone,
-															}, false),
-															Default: nil,
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(8000),
-															Default:      8000,
-														},
-														"specification": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.AacSpecificationMpeg2,
-																mediaconvert.AacSpecificationMpeg4,
-															}, false),
-															Default: nil,
-														},
-														"vbr_quality": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.AacVbrQualityLow,
-																mediaconvert.AacVbrQualityMediumLow,
-																mediaconvert.AacVbrQualityMediumHigh,
-																mediaconvert.AacVbrQualityHigh,
-															}, false),
-															Default: nil,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"audio_description_broadcaster_mix": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.AacAudioDescriptionBroadcasterMixBroadcasterMixedAd,
+																	mediaconvert.AacAudioDescriptionBroadcasterMixNormal,
+																}, false),
+																Default: nil,
+															},
+															"bitrate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(6000),
+																Default:      6000,
+															},
+															"codec_profile": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.AacCodecProfileLc,
+																	mediaconvert.AacCodecProfileHev1,
+																	mediaconvert.AacCodecProfileHev2,
+																}, false),
+																Default: nil,
+															},
+															"coding_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.AacCodingModeAdReceiverMix,
+																	mediaconvert.AacCodingModeCodingMode10,
+																	mediaconvert.AacCodingModeCodingMode11,
+																	mediaconvert.AacCodingModeCodingMode20,
+																	mediaconvert.AacCodingModeCodingMode51,
+																}, false),
+																Default: nil,
+															},
+															"rate_control_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.AacRateControlModeCbr,
+																	mediaconvert.AacRateControlModeVbr,
+																}, false),
+																Default: nil,
+															},
+															"raw_format": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.AacRawFormatLatmLoas,
+																	mediaconvert.AacRawFormatNone,
+																}, false),
+																Default: nil,
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(8000),
+																Default:      8000,
+															},
+															"specification": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.AacSpecificationMpeg2,
+																	mediaconvert.AacSpecificationMpeg4,
+																}, false),
+																Default: nil,
+															},
+															"vbr_quality": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.AacVbrQualityLow,
+																	mediaconvert.AacVbrQualityMediumLow,
+																	mediaconvert.AacVbrQualityMediumHigh,
+																	mediaconvert.AacVbrQualityHigh,
+																}, false),
+																Default: nil,
+															},
 														},
 													},
 												},
 												"ac3_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"bitrate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(64000),
-															Default:      64000,
-														},
-														"bitstream_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Ac3BitstreamModeCompleteMain,
-																mediaconvert.Ac3BitstreamModeCommentary,
-																mediaconvert.Ac3BitstreamModeDialogue,
-																mediaconvert.Ac3BitstreamModeEmergency,
-																mediaconvert.Ac3BitstreamModeHearingImpaired,
-																mediaconvert.Ac3BitstreamModeMusicAndEffects,
-																mediaconvert.Ac3BitstreamModeVisuallyImpaired,
-																mediaconvert.Ac3BitstreamModeVoiceOver,
-															}, false),
-															Default: nil,
-														},
-														"coding_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Ac3CodingModeCodingMode10,
-																mediaconvert.Ac3CodingModeCodingMode11,
-																mediaconvert.Ac3CodingModeCodingMode20,
-																mediaconvert.Ac3CodingModeCodingMode32Lfe,
-															}, false),
-															Default: nil,
-														},
-														"dialnorm": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"dynamic_range_compression_profile": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Ac3DynamicRangeCompressionProfileFilmStandard,
-																mediaconvert.Ac3DynamicRangeCompressionProfileNone,
-															}, false),
-															Default: nil,
-														},
-														"lfe_filter": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Ac3LfeFilterEnabled,
-																mediaconvert.Ac3LfeFilterDisabled,
-															}, false),
-															Default: nil,
-														},
-														"metadata_control": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Ac3MetadataControlFollowInput,
-																mediaconvert.Ac3MetadataControlUseConfigured,
-															}, false),
-															Default: nil,
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(48000),
-															Default:      48000,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"bitrate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(64000),
+																Default:      64000,
+															},
+															"bitstream_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Ac3BitstreamModeCompleteMain,
+																	mediaconvert.Ac3BitstreamModeCommentary,
+																	mediaconvert.Ac3BitstreamModeDialogue,
+																	mediaconvert.Ac3BitstreamModeEmergency,
+																	mediaconvert.Ac3BitstreamModeHearingImpaired,
+																	mediaconvert.Ac3BitstreamModeMusicAndEffects,
+																	mediaconvert.Ac3BitstreamModeVisuallyImpaired,
+																	mediaconvert.Ac3BitstreamModeVoiceOver,
+																}, false),
+																Default: nil,
+															},
+															"coding_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Ac3CodingModeCodingMode10,
+																	mediaconvert.Ac3CodingModeCodingMode11,
+																	mediaconvert.Ac3CodingModeCodingMode20,
+																	mediaconvert.Ac3CodingModeCodingMode32Lfe,
+																}, false),
+																Default: nil,
+															},
+															"dialnorm": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"dynamic_range_compression_profile": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Ac3DynamicRangeCompressionProfileFilmStandard,
+																	mediaconvert.Ac3DynamicRangeCompressionProfileNone,
+																}, false),
+																Default: nil,
+															},
+															"lfe_filter": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Ac3LfeFilterEnabled,
+																	mediaconvert.Ac3LfeFilterDisabled,
+																}, false),
+																Default: nil,
+															},
+															"metadata_control": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Ac3MetadataControlFollowInput,
+																	mediaconvert.Ac3MetadataControlUseConfigured,
+																}, false),
+																Default: nil,
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(48000),
+																Default:      48000,
+															},
 														},
 													},
 												},
 												"aiff_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"bitdepth": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(16),
-															Default:      16,
-														},
-														"channels": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(8000),
-															Default:      8000,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"bitdepth": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(16),
+																Default:      16,
+															},
+															"channels": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(8000),
+																Default:      8000,
+															},
 														},
 													},
 												},
 												"eac3_atmos_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"bitrate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(384000),
-															Default:      384000,
-														},
-														"bitstream_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosBitstreamModeCompleteMain,
-															}, false),
-														},
-														"coding_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosCodingModeCodingMode916,
-															}, false),
-														},
-														"dialogue_intelligence": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosDialogueIntelligenceEnabled,
-																mediaconvert.Eac3AtmosDialogueIntelligenceDisabled,
-															}, false),
-														},
-														"dynamic_range_compression_line": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosDynamicRangeCompressionLineNone,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionLineFilmStandard,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionLineFilmLight,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionLineMusicStandard,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionLineMusicLight,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionLineSpeech,
-															}, false),
-														},
-														"dynamic_range_compression_rf": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosDynamicRangeCompressionRfNone,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionRfFilmStandard,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionRfFilmLight,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionRfMusicStandard,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionRfMusicLight,
-																mediaconvert.Eac3AtmosDynamicRangeCompressionRfSpeech,
-															}, false),
-														},
-														"lo_ro_center_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"lo_ro_surround_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"lt_rt_center_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"lt_rt_surround_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"metering_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosMeteringModeLeqA,
-																mediaconvert.Eac3AtmosMeteringModeItuBs17701,
-																mediaconvert.Eac3AtmosMeteringModeItuBs17702,
-																mediaconvert.Eac3AtmosMeteringModeItuBs17703,
-																mediaconvert.Eac3AtmosMeteringModeItuBs17704,
-															}, false),
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(48000),
-															Default:      48000,
-														},
-														"speech_threshold": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"stereo_downmix": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosStereoDownmixNotIndicated,
-																mediaconvert.Eac3AtmosStereoDownmixStereo,
-																mediaconvert.Eac3AtmosStereoDownmixSurround,
-																mediaconvert.Eac3AtmosStereoDownmixDpl2,
-															}, false),
-														},
-														"surround_ex_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AtmosSurroundExModeNotIndicated,
-																mediaconvert.Eac3AtmosSurroundExModeEnabled,
-																mediaconvert.Eac3AtmosSurroundExModeDisabled,
-															}, false),
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"bitrate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(384000),
+																Default:      384000,
+															},
+															"bitstream_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosBitstreamModeCompleteMain,
+																}, false),
+															},
+															"coding_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosCodingModeCodingMode916,
+																}, false),
+															},
+															"dialogue_intelligence": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosDialogueIntelligenceEnabled,
+																	mediaconvert.Eac3AtmosDialogueIntelligenceDisabled,
+																}, false),
+															},
+															"dynamic_range_compression_line": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionLineNone,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionLineFilmStandard,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionLineFilmLight,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionLineMusicStandard,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionLineMusicLight,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionLineSpeech,
+																}, false),
+															},
+															"dynamic_range_compression_rf": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionRfNone,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionRfFilmStandard,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionRfFilmLight,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionRfMusicStandard,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionRfMusicLight,
+																	mediaconvert.Eac3AtmosDynamicRangeCompressionRfSpeech,
+																}, false),
+															},
+															"lo_ro_center_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"lo_ro_surround_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"lt_rt_center_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"lt_rt_surround_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"metering_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosMeteringModeLeqA,
+																	mediaconvert.Eac3AtmosMeteringModeItuBs17701,
+																	mediaconvert.Eac3AtmosMeteringModeItuBs17702,
+																	mediaconvert.Eac3AtmosMeteringModeItuBs17703,
+																	mediaconvert.Eac3AtmosMeteringModeItuBs17704,
+																}, false),
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(48000),
+																Default:      48000,
+															},
+															"speech_threshold": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"stereo_downmix": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosStereoDownmixNotIndicated,
+																	mediaconvert.Eac3AtmosStereoDownmixStereo,
+																	mediaconvert.Eac3AtmosStereoDownmixSurround,
+																	mediaconvert.Eac3AtmosStereoDownmixDpl2,
+																}, false),
+															},
+															"surround_ex_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AtmosSurroundExModeNotIndicated,
+																	mediaconvert.Eac3AtmosSurroundExModeEnabled,
+																	mediaconvert.Eac3AtmosSurroundExModeDisabled,
+																}, false),
+															},
 														},
 													},
 												},
 												"eac3_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"attenuation_control": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3AttenuationControlAttenuate3Db,
-																mediaconvert.Eac3AttenuationControlNone,
-															}, false),
-														},
-														"bitrate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(64000),
-															Default:      64000,
-														},
-														"bitstream_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3BitstreamModeCompleteMain,
-																mediaconvert.Eac3BitstreamModeCommentary,
-																mediaconvert.Eac3BitstreamModeEmergency,
-																mediaconvert.Eac3BitstreamModeHearingImpaired,
-																mediaconvert.Eac3BitstreamModeVisuallyImpaired,
-															}, false),
-														},
-														"coding_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3CodingModeCodingMode10,
-																mediaconvert.Eac3CodingModeCodingMode20,
-																mediaconvert.Eac3CodingModeCodingMode32,
-															}, false),
-														},
-														"dc_filter": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3DcFilterEnabled,
-																mediaconvert.Eac3DcFilterDisabled,
-															}, false),
-														},
-														"dialnorm": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"dynamic_range_compression_line": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3DynamicRangeCompressionLineNone,
-																mediaconvert.Eac3DynamicRangeCompressionLineFilmStandard,
-																mediaconvert.Eac3DynamicRangeCompressionLineFilmLight,
-																mediaconvert.Eac3DynamicRangeCompressionLineMusicStandard,
-																mediaconvert.Eac3DynamicRangeCompressionLineMusicLight,
-																mediaconvert.Eac3DynamicRangeCompressionLineSpeech,
-															}, false),
-														},
-														"dynamic_range_compression_rf": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3DynamicRangeCompressionRfNone,
-																mediaconvert.Eac3DynamicRangeCompressionRfFilmStandard,
-																mediaconvert.Eac3DynamicRangeCompressionRfFilmLight,
-																mediaconvert.Eac3DynamicRangeCompressionRfMusicStandard,
-																mediaconvert.Eac3DynamicRangeCompressionRfMusicLight,
-																mediaconvert.Eac3DynamicRangeCompressionRfSpeech,
-															}, false),
-														},
-														"lfe_control": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3LfeControlLfe,
-																mediaconvert.Eac3LfeControlNoLfe,
-															}, false),
-														},
-														"lfe_filter": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3LfeFilterEnabled,
-																mediaconvert.Eac3LfeFilterDisabled,
-															}, false),
-														},
-														"lo_ro_center_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"lo_ro_surround_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"lt_rt_center_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"lt_rt_surround_mix_level": {
-															Type:     schema.TypeFloat,
-															Optional: true,
-															Default:  0,
-														},
-														"metadata_control": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3MetadataControlFollowInput,
-																mediaconvert.Eac3MetadataControlUseConfigured,
-															}, false),
-														},
-														"passthrough_control": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3PassthroughControlWhenPossible,
-																mediaconvert.Eac3PassthroughControlNoPassthrough,
-															}, false),
-														},
-														"phase_control": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3PhaseControlShift90Degrees,
-																mediaconvert.Eac3PhaseControlNoShift,
-															}, false),
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(48000),
-															Default:      48000,
-														},
-														"stereo_downmix": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3StereoDownmixNotIndicated,
-																mediaconvert.Eac3StereoDownmixLoRo,
-																mediaconvert.Eac3StereoDownmixLtRt,
-																mediaconvert.Eac3StereoDownmixDpl2,
-															}, false),
-														},
-														"surround_ex_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3SurroundExModeNotIndicated,
-																mediaconvert.Eac3SurroundExModeEnabled,
-																mediaconvert.Eac3SurroundExModeDisabled,
-															}, false),
-														},
-														"surround_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Eac3SurroundModeNotIndicated,
-																mediaconvert.Eac3SurroundModeEnabled,
-																mediaconvert.Eac3SurroundModeDisabled,
-															}, false),
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"attenuation_control": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3AttenuationControlAttenuate3Db,
+																	mediaconvert.Eac3AttenuationControlNone,
+																}, false),
+															},
+															"bitrate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(64000),
+																Default:      64000,
+															},
+															"bitstream_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3BitstreamModeCompleteMain,
+																	mediaconvert.Eac3BitstreamModeCommentary,
+																	mediaconvert.Eac3BitstreamModeEmergency,
+																	mediaconvert.Eac3BitstreamModeHearingImpaired,
+																	mediaconvert.Eac3BitstreamModeVisuallyImpaired,
+																}, false),
+															},
+															"coding_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3CodingModeCodingMode10,
+																	mediaconvert.Eac3CodingModeCodingMode20,
+																	mediaconvert.Eac3CodingModeCodingMode32,
+																}, false),
+															},
+															"dc_filter": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3DcFilterEnabled,
+																	mediaconvert.Eac3DcFilterDisabled,
+																}, false),
+															},
+															"dialnorm": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"dynamic_range_compression_line": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3DynamicRangeCompressionLineNone,
+																	mediaconvert.Eac3DynamicRangeCompressionLineFilmStandard,
+																	mediaconvert.Eac3DynamicRangeCompressionLineFilmLight,
+																	mediaconvert.Eac3DynamicRangeCompressionLineMusicStandard,
+																	mediaconvert.Eac3DynamicRangeCompressionLineMusicLight,
+																	mediaconvert.Eac3DynamicRangeCompressionLineSpeech,
+																}, false),
+															},
+															"dynamic_range_compression_rf": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3DynamicRangeCompressionRfNone,
+																	mediaconvert.Eac3DynamicRangeCompressionRfFilmStandard,
+																	mediaconvert.Eac3DynamicRangeCompressionRfFilmLight,
+																	mediaconvert.Eac3DynamicRangeCompressionRfMusicStandard,
+																	mediaconvert.Eac3DynamicRangeCompressionRfMusicLight,
+																	mediaconvert.Eac3DynamicRangeCompressionRfSpeech,
+																}, false),
+															},
+															"lfe_control": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3LfeControlLfe,
+																	mediaconvert.Eac3LfeControlNoLfe,
+																}, false),
+															},
+															"lfe_filter": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3LfeFilterEnabled,
+																	mediaconvert.Eac3LfeFilterDisabled,
+																}, false),
+															},
+															"lo_ro_center_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"lo_ro_surround_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"lt_rt_center_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"lt_rt_surround_mix_level": {
+																Type:     schema.TypeFloat,
+																Optional: true,
+																Default:  0,
+															},
+															"metadata_control": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3MetadataControlFollowInput,
+																	mediaconvert.Eac3MetadataControlUseConfigured,
+																}, false),
+															},
+															"passthrough_control": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3PassthroughControlWhenPossible,
+																	mediaconvert.Eac3PassthroughControlNoPassthrough,
+																}, false),
+															},
+															"phase_control": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3PhaseControlShift90Degrees,
+																	mediaconvert.Eac3PhaseControlNoShift,
+																}, false),
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(48000),
+																Default:      48000,
+															},
+															"stereo_downmix": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3StereoDownmixNotIndicated,
+																	mediaconvert.Eac3StereoDownmixLoRo,
+																	mediaconvert.Eac3StereoDownmixLtRt,
+																	mediaconvert.Eac3StereoDownmixDpl2,
+																}, false),
+															},
+															"surround_ex_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3SurroundExModeNotIndicated,
+																	mediaconvert.Eac3SurroundExModeEnabled,
+																	mediaconvert.Eac3SurroundExModeDisabled,
+																}, false),
+															},
+															"surround_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Eac3SurroundModeNotIndicated,
+																	mediaconvert.Eac3SurroundModeEnabled,
+																	mediaconvert.Eac3SurroundModeDisabled,
+																}, false),
+															},
 														},
 													},
 												},
 												"mp2_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"bitrate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(32000),
-															Default:      32000,
-														},
-														"channels": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(32000),
-															Default:      32000,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"bitrate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(32000),
+																Default:      32000,
+															},
+															"channels": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(32000),
+																Default:      32000,
+															},
 														},
 													},
 												},
 												"mp3_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"bitrate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(16000),
-															Default:      16000,
-														},
-														"channels": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"rate_control_mode": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.Mp3RateControlModeCbr,
-																mediaconvert.Mp3RateControlModeVbr,
-															}, false),
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(22050),
-															Default:      22050,
-														},
-														"vbr_quality": {
-															Type:     schema.TypeInt,
-															Optional: true,
-															Default:  0,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"bitrate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(16000),
+																Default:      16000,
+															},
+															"channels": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"rate_control_mode": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.Mp3RateControlModeCbr,
+																	mediaconvert.Mp3RateControlModeVbr,
+																}, false),
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(22050),
+																Default:      22050,
+															},
+															"vbr_quality": {
+																Type:     schema.TypeInt,
+																Optional: true,
+																Default:  0,
+															},
 														},
 													},
 												},
 												"opus_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"bitrate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(32000),
-															Default:      32000,
-														},
-														"channels": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(16000),
-															Default:      16000,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"bitrate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(32000),
+																Default:      32000,
+															},
+															"channels": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(16000),
+																Default:      16000,
+															},
 														},
 													},
 												},
 												"vorbis_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"channels": {
-															Type:         schema.TypeInt,
-															Computed:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"sample_rate": {
-															Type:         schema.TypeInt,
-															Computed:     true,
-															ValidateFunc: validation.IntAtLeast(22050),
-															Default:      22050,
-														},
-														"vbr_quality": {
-															Type:     schema.TypeInt,
-															Computed: true,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"channels": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"sample_rate": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(22050),
+																Default:      22050,
+															},
+															"vbr_quality": {
+																Type:     schema.TypeInt,
+																Optional: true,
+															},
 														},
 													},
 												},
 												"wav_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Elem: map[string]*schema.Schema{
-														"bitdepth": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(16),
-															Default:      16,
-														},
-														"channels": {
-															Type:         schema.TypeInt,
-															Optional:     true,
-															ValidateFunc: validation.IntAtLeast(1),
-															Default:      1,
-														},
-														"format": {
-															Type:     schema.TypeString,
-															Optional: true,
-															ValidateFunc: validation.StringInSlice([]string{
-																mediaconvert.WavFormatRiff,
-																mediaconvert.WavFormatRf64,
-															}, false),
-														},
-														"sample_rate": {
-															Optional:     true,
-															Type:         schema.TypeInt,
-															ValidateFunc: validation.IntAtLeast(8000),
-															Default:      8000,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"bitdepth": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(16),
+																Default:      16,
+															},
+															"channels": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+																Default:      1,
+															},
+															"format": {
+																Type:     schema.TypeString,
+																Optional: true,
+																ValidateFunc: validation.StringInSlice([]string{
+																	mediaconvert.WavFormatRiff,
+																	mediaconvert.WavFormatRf64,
+																}, false),
+															},
+															"sample_rate": {
+																Optional:     true,
+																Type:         schema.TypeInt,
+																ValidateFunc: validation.IntAtLeast(8000),
+																Default:      8000,
+															},
 														},
 													},
 												},
@@ -853,8 +876,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 						},
 						"caption_description": {
 							Type:     schema.TypeList,
-							Required: true,
-							ForceNew: true,
+							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"custom_language_code": {
@@ -1005,7 +1027,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"dvb_sub_destination_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"alignment": {
@@ -1130,7 +1151,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"embedded_destination_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"destination_608_channel_number": {
@@ -1149,7 +1169,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"imsc_destination_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"style_passthrough": {
@@ -1166,7 +1185,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"scc_destination_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"framerate": {
@@ -1186,7 +1204,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"teletext_destination_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"page_number": {
@@ -1206,7 +1223,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"ttml_destination_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"style_passthrough": {
@@ -1238,13 +1254,11 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 						"container_settings": {
 							Type:     schema.TypeList,
 							Required: true,
-							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"cmfc_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"audio_duration": {
@@ -1294,7 +1308,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 									"f4v_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"moov_placement": {
@@ -1311,7 +1324,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 									"m2ts_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"audio_duration": {
@@ -1347,7 +1359,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"dvb_nit_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"network_id": {
@@ -1370,7 +1381,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"dvb_sdt_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"output_sdt": {
@@ -1410,7 +1420,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"dvb_tdt_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"tdt_interval": {
@@ -1600,7 +1609,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 									"m3u8_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"audio_duration": {
@@ -1704,7 +1712,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 									"mov_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"clap_atom": {
@@ -1753,7 +1760,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 									"mp4_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"audio_duration": {
@@ -1803,7 +1809,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 									"mpd_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"accessibility_caption_hints": {
@@ -1851,7 +1856,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 									"mxf_settings": {
 										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"afd_signaling": {
@@ -2402,7 +2406,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 															"softness": {
 																Type:         schema.TypeInt,
 																Optional:     true,
-																ValidateFunc: validation.IntBetween(17, 128),
+																ValidateFunc: validation.IntBetween(0, 128),
 															},
 															"spatial_adaptive_quantization": {
 																Type:     schema.TypeString,
@@ -2776,7 +2780,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"mpeg2_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"adaptive_quantization": {
@@ -3008,7 +3011,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"prores_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"codec_profile": {
@@ -3101,7 +3103,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"vc3_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"framerate_control": {
@@ -3170,7 +3171,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"vp8_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"bitrate": {
@@ -3259,7 +3259,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"vp9_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"bitrate": {
@@ -3891,14 +3890,349 @@ func resourceAwsMediaConvertPresetCreate(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
 	}
-	// createOpts := &mediaconvert.CreatePresetInput{
-	// 	Category:    aws.String(d.Get("category").(string)),
-	// 	Description: aws.String(d.Get("description").(string)),
-	// 	Name:        aws.String(d.Get("name").(string)),
-	// 	//Settings
-	// 	Tags: keyvaluetags.New(d.Get("tags").(map[string]interface{})).IgnoreAws().MediaconvertTags(),
-	// }
+	settings := &mediaconvert.PresetSettings{}
+	if attr, ok := d.GetOk("settings"); ok {
+		settings = expandMediaPresetSettings(attr.([]interface{}))
+	}
+
+	input := &mediaconvert.CreatePresetInput{
+		Category:    aws.String(d.Get("category").(string)),
+		Description: aws.String(d.Get("description").(string)),
+		Name:        aws.String(d.Get("name").(string)),
+		Settings:    settings,
+		Tags:        keyvaluetags.New(d.Get("tags").(map[string]interface{})).IgnoreAws().MediaconvertTags(),
+	}
+	log.Printf("[DEBUG] Creating MediaConvert Preset: %s", input)
 	return resourceAwsMediaConvertPresetRead(d, meta)
+}
+
+func expandMediaPresetSettings(list []interface{}) *mediaconvert.PresetSettings {
+	presetSettings := &mediaconvert.PresetSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	settings := list[0].(map[string]interface{})
+	audioDescription := &mediaconvert.AudioDescription{}
+	if v, ok := settings["audio_description"]; ok {
+		presetSettings.AudioDescriptions = expandMediaConvertAudioDescription(v.([]interface{}))
+	}
+	if v, ok := settings["caption_description"]; ok {
+		presetSettings.CaptionDescriptions = expandMediaConvertCaptionDescription(v.([]interface{}))
+	}
+
+	fmt.Println(audioDescription)
+	return presetSettings
+}
+
+func expandMediaConvertCaptionDescription(list []interface{}) []*mediaconvert.CaptionDescriptionPreset {
+	results := []*mediaconvert.CaptionDescriptionPreset{}
+	for i := 0; i < len(list); i++ {
+		captionDescriptionPreset := &mediaconvert.CaptionDescriptionPreset{}
+		captionDescriptionPresetMap := list[i].(map[string]interface{})
+		captionDescriptionPreset.CustomLanguageCode = aws.String(captionDescriptionPresetMap["custom_language_code"].(string))
+		captionDescriptionPreset.DestinationSettings = expandMediaConvertCaptionDestinationSettings(captionDescriptionPresetMap["destination_settings"].([]interface{}))
+		captionDescriptionPreset.LanguageCode = aws.String(captionDescriptionPresetMap["language_code"].(string))
+		captionDescriptionPreset.LanguageDescription = aws.String(captionDescriptionPresetMap["language_description"].(string))
+		results = append(results, captionDescriptionPreset)
+	}
+	return results
+}
+
+func expandMediaConvertCaptionDestinationSettings(list []interface{}) *mediaconvert.CaptionDestinationSettings {
+	result := &mediaconvert.CaptionDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	captionDestinationSettingsMap := list[0].(map[string]interface{})
+	// captionDestinationSettings.BurninDestinationSettings
+	// captionDestinationSettings.DestinationType
+	// captionDestinationSettings.DvbSubDestinationSettings
+	// captionDestinationSettings.EmbeddedDestinationSettings
+	// captionDestinationSettings.ImscDestinationSettings
+	// captionDestinationSettings.SccDestinationSettings
+	result.TeletextDestinationSettings = expandMediaConvertTeletextDestinationSettings(captionDestinationSettingsMap["teletext_destination_settings"].([]interface{}))
+	result.TtmlDestinationSettings = expandMediaConvertTtmlDestinationSettings(captionDestinationSettingsMap["ttml_destination_settings"].([]interface{}))
+	return result
+}
+
+func expandMediaConvertSccDestinationSettings(list []interface{}) *mediaconvert.SccDestinationSettings {
+	result := &mediaconvert.SccDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	sccDestinationSettingsMap := list[0].(map[string]interface{})
+	result.Framerate = aws.String(sccDestinationSettingsMap["framerate"].(string))
+	return result
+}
+func expandMediaConvertTeletextDestinationSettings(list []interface{}) *mediaconvert.TeletextDestinationSettings {
+	result := &mediaconvert.TeletextDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	teletextDestinationSettingsMap := list[0].(map[string]interface{})
+	result.PageNumber = aws.String(teletextDestinationSettingsMap["page_number"].(string))
+	result.PageTypes = expandStringSet(teletextDestinationSettingsMap["page_types"].(*schema.Set))
+	return result
+}
+
+func expandMediaConvertTtmlDestinationSettings(list []interface{}) *mediaconvert.TtmlDestinationSettings {
+	result := &mediaconvert.TtmlDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	ttmlDestinationSettingsMap := list[0].(map[string]interface{})
+	result.StylePassthrough = aws.String(ttmlDestinationSettingsMap["style_passthrough"].(string))
+	return result
+}
+
+func expandMediaConvertAudioDescription(list []interface{}) []*mediaconvert.AudioDescription {
+	results := []*mediaconvert.AudioDescription{}
+	for i := 0; i < len(list); i++ {
+		audioDescription := &mediaconvert.AudioDescription{}
+		audioDescriptionMap := list[i].(map[string]interface{})
+		audioDescription.AudioSourceName = aws.String(audioDescriptionMap["audio_source_name"].(string))
+		audioDescription.AudioType = aws.Int64(int64(audioDescriptionMap["audio_type"].(int)))
+		audioDescription.AudioTypeControl = aws.String(audioDescriptionMap["audio_type_control"].(string))
+		audioDescription.CustomLanguageCode = aws.String(audioDescriptionMap["custom_language_code"].(string))
+		audioDescription.LanguageCode = aws.String(audioDescriptionMap["language_code"].(string))
+		audioDescription.LanguageCodeControl = aws.String(audioDescriptionMap["language_code_control"].(string))
+		audioDescription.StreamName = aws.String(audioDescriptionMap["stream_name"].(string))
+		audioDescription.AudioChannelTaggingSettings = expandMediaConvertAudioChannelTagging(audioDescriptionMap["audio_channel_tagging_settings"].([]interface{}))
+		audioDescription.AudioNormalizationSettings = expandMediaConvertAudioNormalizationSettings(audioDescriptionMap["audio_normalization_settings"].([]interface{}))
+		audioDescription.CodecSettings = expandMediaConvertCodecSettings(audioDescriptionMap["codec_settings"].([]interface{}))
+		audioDescription.RemixSettings = expandMediaConvertRemixSettings(audioDescriptionMap["remix_settings"].([]interface{}))
+		results = append(results, audioDescription)
+	}
+	return results
+
+}
+
+func expandMediaConvertRemixSettings(list []interface{}) *mediaconvert.RemixSettings {
+	result := &mediaconvert.RemixSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	remixSettings := list[0].(map[string]interface{})
+	result.ChannelMapping = expandMediaConvertChannelMapping(remixSettings["channel_mapping"].([]interface{}))
+	result.ChannelsIn = aws.Int64(int64(remixSettings["channels_in"].(int)))
+	result.ChannelsOut = aws.Int64(int64(remixSettings["channels_out"].(int)))
+	return result
+}
+
+func expandMediaConvertChannelMapping(list []interface{}) *mediaconvert.ChannelMapping {
+	channelMapping := list[0].(map[string]interface{})
+	result := &mediaconvert.ChannelMapping{}
+	//TODO: Test channel mapping loading
+
+	return result
+}
+
+func expandMediaConvertCodecSettings(list []interface{}) *mediaconvert.AudioCodecSettings {
+	result := &mediaconvert.AudioCodecSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	codecSettings := list[0].(map[string]interface{})
+	result.Codec = aws.String(codecSettings["codec"].(string))
+	result.AacSettings = expandMediaConvertAacSettings(codecSettings["aac_settings"].([]interface{}))
+	result.Ac3Settings = expandMediaConvertAc3Settings(codecSettings["ac3_settings"].([]interface{}))
+	result.AiffSettings = expandMediaConvertAiffSettings(codecSettings["aiff_settings"].([]interface{}))
+	result.Eac3AtmosSettings = expandMediaConvertEac3AtmosSettings(codecSettings["eac3_atmos_settings"].([]interface{}))
+	result.Eac3Settings = expandMediaConvertEac3Settings(codecSettings["eac3_settings"].([]interface{}))
+	result.Mp2Settings = expandMediaConvertMp2Settings(codecSettings["mp2_settings"].([]interface{}))
+	result.Mp3Settings = expandMediaConvertMp3Settings(codecSettings["mp3_settings"].([]interface{}))
+	result.OpusSettings = expandMediaConvertOpusSettings(codecSettings["opus_settings"].([]interface{}))
+	result.VorbisSettings = expandMediaConvertVorbisSettings(codecSettings["vorbis_settings"].([]interface{}))
+	result.WavSettings = expandMediaConvertWavSettings(codecSettings["wav_settings"].([]interface{}))
+	return result
+}
+
+func expandMediaConvertWavSettings(list []interface{}) *mediaconvert.WavSettings {
+	result := &mediaconvert.WavSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	wavSettings := list[0].(map[string]interface{})
+	result.BitDepth = aws.Int64(int64(wavSettings["bitdepth"].(int)))
+	result.Channels = aws.Int64(int64(wavSettings["channels"].(int)))
+	result.Format = aws.String(wavSettings["format"].(string))
+	result.SampleRate = aws.Int64(int64(wavSettings["sample_rate"].(int)))
+	return result
+}
+func expandMediaConvertVorbisSettings(list []interface{}) *mediaconvert.VorbisSettings {
+	result := &mediaconvert.VorbisSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	vorbisSettings := list[0].(map[string]interface{})
+	result.Channels = aws.Int64(int64(vorbisSettings["channels"].(int)))
+	result.SampleRate = aws.Int64(int64(vorbisSettings["sample_rate"].(int)))
+	result.VbrQuality = aws.Int64(int64(vorbisSettings["vbr_quality"].(int)))
+	return result
+}
+
+func expandMediaConvertOpusSettings(list []interface{}) *mediaconvert.OpusSettings {
+	result := &mediaconvert.OpusSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	opusSettings := list[0].(map[string]interface{})
+	result.Bitrate = aws.Int64(int64(opusSettings["bitrate"].(int)))
+	result.Channels = aws.Int64(int64(opusSettings["channels"].(int)))
+	result.SampleRate = aws.Int64(int64(opusSettings["sample_rate"].(int)))
+	return result
+}
+
+func expandMediaConvertMp3Settings(list []interface{}) *mediaconvert.Mp3Settings {
+	result := &mediaconvert.Mp3Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	mp3Settings := list[0].(map[string]interface{})
+	result.Bitrate = aws.Int64(int64(mp3Settings["bitrate"].(int)))
+	result.Channels = aws.Int64(int64(mp3Settings["channels"].(int)))
+	result.RateControlMode = aws.String(mp3Settings["rate_control_mode"].(string))
+	result.SampleRate = aws.Int64(int64(mp3Settings["sample_rate"].(int)))
+	result.VbrQuality = aws.Int64(int64(mp3Settings["vbr_quality"].(int)))
+	return result
+}
+
+func expandMediaConvertMp2Settings(list []interface{}) *mediaconvert.Mp2Settings {
+	result := &mediaconvert.Mp2Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	mp2Settings := list[0].(map[string]interface{})
+	result.Bitrate = aws.Int64(int64(mp2Settings["bitrate"].(int)))
+	result.Channels = aws.Int64(int64(mp2Settings["channels"].(int)))
+	result.SampleRate = aws.Int64(int64(mp2Settings["sample_rate"].(int)))
+	return result
+}
+
+func expandMediaConvertEac3Settings(list []interface{}) *mediaconvert.Eac3Settings {
+	result := &mediaconvert.Eac3Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	eac3Settings := list[0].(map[string]interface{})
+	result.AttenuationControl = aws.String(eac3Settings["attenuation_control"].(string))
+	result.Bitrate = aws.Int64(int64(eac3Settings["bitrate"].(int)))
+	result.BitstreamMode = aws.String(eac3Settings["bitstream_mode"].(string))
+	result.CodingMode = aws.String(eac3Settings["coding_mode"].(string))
+	result.DcFilter = aws.String(eac3Settings["dc_filter"].(string))
+	result.Dialnorm = aws.Int64(int64(eac3Settings["dialnorm"].(int)))
+	result.DynamicRangeCompressionLine = aws.String(eac3Settings["dynamic_range_compression_line"].(string))
+	result.DynamicRangeCompressionRf = aws.String(eac3Settings["dynamic_range_compression_rf"].(string))
+	result.LfeControl = aws.String(eac3Settings["lfe_control"].(string))
+	result.LfeFilter = aws.String(eac3Settings["lfe_filter"].(string))
+	result.LoRoCenterMixLevel = aws.Float64(float64(eac3Settings["lo_ro_center_mix_level"].(float32)))
+	result.LoRoSurroundMixLevel = aws.Float64(float64(eac3Settings["lo_ro_surround_mix_level"].(float32)))
+	result.LtRtCenterMixLevel = aws.Float64(float64(eac3Settings["lt_rt_center_mix_level"].(float32)))
+	result.LtRtSurroundMixLevel = aws.Float64(float64(eac3Settings["lt_rt_surround_mix_level"].(float32)))
+	result.MetadataControl = aws.String(eac3Settings["metadata_control"].(string))
+	result.PassthroughControl = aws.String(eac3Settings["passthrough_control"].(string))
+	result.PhaseControl = aws.String(eac3Settings["phase_control"].(string))
+	result.SampleRate = aws.Int64(int64(eac3Settings["sample_rate"].(int)))
+	result.StereoDownmix = aws.String(eac3Settings["stereo_downmix"].(string))
+	result.SurroundExMode = aws.String(eac3Settings["surround_ex_mode"].(string))
+	result.SurroundMode = aws.String(eac3Settings["surround_mode"].(string))
+	return result
+}
+
+func expandMediaConvertEac3AtmosSettings(list []interface{}) *mediaconvert.Eac3AtmosSettings {
+	result := &mediaconvert.Eac3AtmosSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	eac3AtmosSettings := list[0].(map[string]interface{})
+	result.Bitrate = aws.Int64(int64(eac3AtmosSettings["bitrate"].(int)))
+	result.BitstreamMode = aws.String(eac3AtmosSettings["bitstream_mode"].(string))
+	result.CodingMode = aws.String(eac3AtmosSettings["coding_mode"].(string))
+	result.DialogueIntelligence = aws.String(eac3AtmosSettings["dialogue_intelligence"].(string))
+	result.DynamicRangeCompressionLine = aws.String(eac3AtmosSettings["dynamic_range_compression_line"].(string))
+	result.DynamicRangeCompressionRf = aws.String(eac3AtmosSettings["dynamic_range_compression_rf"].(string))
+	result.LoRoCenterMixLevel = aws.Float64(float64(eac3AtmosSettings["lo_ro_center_mix_level"].(float32)))
+	result.LoRoSurroundMixLevel = aws.Float64(float64(eac3AtmosSettings["lo_ro_surround_mix_level"].(float32)))
+	result.LtRtCenterMixLevel = aws.Float64(float64(eac3AtmosSettings["lt_rt_center_mix_level"].(float32)))
+	result.LtRtSurroundMixLevel = aws.Float64(float64(eac3AtmosSettings["lt_rt_surround_mix_level"].(float32)))
+	result.MeteringMode = aws.String(eac3AtmosSettings["metering_mode"].(string))
+	result.SampleRate = aws.Int64(int64(eac3AtmosSettings["sample_rate"].(int)))
+	result.SpeechThreshold = aws.Int64(int64(eac3AtmosSettings["speech_threshold"].(int)))
+	result.StereoDownmix = aws.String(eac3AtmosSettings["stereo_downmix"].(string))
+	result.SurroundExMode = aws.String(eac3AtmosSettings["surround_ex_mode"].(string))
+	return result
+}
+
+func expandMediaConvertAiffSettings(list []interface{}) *mediaconvert.AiffSettings {
+	result := &mediaconvert.AiffSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	aiffSettings := list[0].(map[string]interface{})
+	result.BitDepth = aws.Int64(int64(aiffSettings["bitdepth"].(int)))
+	result.Channels = aws.Int64(int64(aiffSettings["channels"].(int)))
+	result.SampleRate = aws.Int64(int64(aiffSettings["sample_rate"].(int)))
+	return result
+}
+func expandMediaConvertAc3Settings(list []interface{}) *mediaconvert.Ac3Settings {
+	result := &mediaconvert.Ac3Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	ac3Settings := list[0].(map[string]interface{})
+	result.Bitrate = aws.Int64(int64(ac3Settings["bitrate"].(int)))
+	result.BitstreamMode = aws.String(ac3Settings["bitstream_mode"].(string))
+	result.CodingMode = aws.String(ac3Settings["coding_mode"].(string))
+	result.Dialnorm = aws.Int64(int64(ac3Settings["dialnorm"].(int)))
+	result.DynamicRangeCompressionProfile = aws.String(ac3Settings["dynamic_range_compression_profile"].(string))
+	result.LfeFilter = aws.String(ac3Settings["lfe_filter"].(string))
+	result.MetadataControl = aws.String(ac3Settings["metadata_control"].(string))
+	result.SampleRate = aws.Int64(int64(ac3Settings["sample_rate"].(int)))
+	return result
+}
+
+func expandMediaConvertAacSettings(list []interface{}) *mediaconvert.AacSettings {
+	result := &mediaconvert.AacSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	aacSettings := list[0].(map[string]interface{})
+	result.AudioDescriptionBroadcasterMix = aws.String(aacSettings["audio_description_broadcaster_mix"].(string))
+	result.Bitrate = aws.Int64(int64(aacSettings["bitrate"].(int)))
+	result.CodecProfile = aws.String(aacSettings["codec_profile"].(string))
+	result.CodingMode = aws.String(aacSettings["coding_mode"].(string))
+	result.RateControlMode = aws.String(aacSettings["rate_control_mode"].(string))
+	result.RawFormat = aws.String(aacSettings["raw_format"].(string))
+	result.SampleRate = aws.Int64(int64(aacSettings["sample_rate"].(int)))
+	result.Specification = aws.String(aacSettings["specification"].(string))
+	result.VbrQuality = aws.String(aacSettings["vbr_quality"].(string))
+	return result
+}
+
+func expandMediaConvertAudioNormalizationSettings(list []interface{}) *mediaconvert.AudioNormalizationSettings {
+	result := &mediaconvert.AudioNormalizationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	audioNormalizationSettings := list[0].(map[string]interface{})
+	result.Algorithm = aws.String(audioNormalizationSettings["algorithm"].(string))
+	result.AlgorithmControl = aws.String(audioNormalizationSettings["algorithm_control"].(string))
+	result.CorrectionGateLevel = aws.Int64(int64(audioNormalizationSettings["correction_gate_level"].(int)))
+	result.LoudnessLogging = aws.String(audioNormalizationSettings["loudness_logging"].(string))
+	result.PeakCalculation = aws.String(audioNormalizationSettings["peak_calculation"].(string))
+	result.TargetLkfs = aws.Float64(float64(audioNormalizationSettings["correction_gate_level"].(float32)))
+	return result
+}
+
+func expandMediaConvertAudioChannelTagging(list []interface{}) *mediaconvert.AudioChannelTaggingSettings {
+	result := &mediaconvert.AudioChannelTaggingSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	channelTags := list[0].(map[string]interface{})
+
+	result.ChannelTag = aws.String(channelTags["channel_tag"].(string))
+	return result
 }
 
 func resourceAwsMediaConvertPresetRead(d *schema.ResourceData, meta interface{}) error {

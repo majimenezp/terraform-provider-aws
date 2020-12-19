@@ -50,92 +50,89 @@ func TestAccAwsMediaConvertPreset_base(t *testing.T) {
 func testAccMediaConvertPresetConfig_Basic(rName string) string {
 	return fmt.Sprintf(`
 resource "aws_media_convert_preset" "test" {
-  name = %[1]q
-  category = ""
-  settings {
-	video_description {
-		scaling_behavior = "DEFAULT"
-		timecode_insertion = "DISABLED"
-		anti_alias = "ENABLED"
-		sharpness = 50
-		afd_signaling = "NONE"
-		drop_frame_timecode = "ENABLED"
-		respond_to_afd = "NONE"
-		color_metadata = "INSERT"
-		codec_settings {
-			codec = "H_264"
-			h264_settings {
-				interlace_mode = "PROGRESSIVE"
-				number_reference_frames = 3
-				syntax = "DEFAULT"
-				softness = 0
-				gop_closed_cadence = 1
-				gop_size = 90
-				slices = 1
-				gop_b_reference = "DISABLED"
-				max_bitrate = 5000000
-				slow_pal = "DISABLED"
-				spatial_adaptive_quantization = "ENABLED"
-				temporal_adaptive_quantization = "ENABLED"
-				flicker_adaptive_quantization = "DISABLED"
-				entropy_encoding = "CABAC"
-				framerate_control = "INITIALIZE_FROM_SOURCE"
-				rate_control_mode = "QVBR"
-				qvbr_settings {
-					qvbr_quality_level = 9
-					qvbr_quality_level_fine_tune = 0
+	name = %[1]q
+	category = ""
+	settings {
+		video_description {
+			scaling_behavior = "DEFAULT"
+			timecode_insertion = "DISABLED"
+			anti_alias = "ENABLED"
+			sharpness = 50
+			afd_signaling = "NONE"
+			drop_frame_timecode = "ENABLED"
+			respond_to_afd = "NONE"
+			color_metadata = "INSERT"
+			codec_settings {
+				codec = "H_264"
+				h264_settings {
+					interlace_mode = "PROGRESSIVE"
+					number_reference_frames = 3
+					syntax = "DEFAULT"
+					softness = 0
+					gop_closed_cadence = 1
+					gop_size = 90
+					slices = 1
+					gop_b_reference = "DISABLED"
+					max_bitrate = 5000000
+					slow_pal = "DISABLED"
+					spatial_adaptive_quantization = "ENABLED"
+					temporal_adaptive_quantization = "ENABLED"
+					flicker_adaptive_quantization = "DISABLED"
+					entropy_encoding = "CABAC"
+					framerate_control = "INITIALIZE_FROM_SOURCE"
+					rate_control_mode = "QVBR"
+					qvbr_settings {
+						qvbr_quality_level = 9
+						qvbr_quality_level_fine_tune = 0
+					}
+					codec_profile = "MAIN"
+					telecine = "NONE"
+					min_i_interval = 0
+					adaptive_quantization = "HIGH"
+					codec_level = "AUTO"
+					field_encoding = "PAFF"
+					scene_change_detect = "ENABLED"
+					quality_tuning_level = "SINGLE_PASS"
+					framerate_conversion_algorithm = "DUPLICATE_DROP"
+					unregistered_sei_timecode = "DISABLED"
+					gop_size_units = "FRAMES"
+					par_control = "INITIALIZE_FROM_SOURCE"
+					number_b_frames_between_reference_frames = 2
+					repeat_pps = "DISABLED"
+					dynamic_sub_gop = "STATIC"
 				}
 			}
 		}
-	}
-	audio_description {
-		audio_type_control = "FOLLOW_INPUT"
-		audio_source_name = "Audio Selector 1"
-		language_code_control = "FOLLOW_INPUT"
-		afd_signaling = "NONE"
-		drop_frame_timecode = "ENABLED"
-		respond_to_afd = "NONE"
-		color_metadata = "INSERT"
-		codec_settings {
-			codec = "AAC"
-			aac_settings {
-				audio_description_broadcaster_mix = "NORMAL"
-				bitrate = 96000
-				rate_control_mode = "CBR"
-				coding_mode = "CODING_MODE_2_0"
-				raw_format = "NONE"
-				sample_rate = 48000
-				specification = "MPEG4"
+		audio_description {
+			audio_type_control = "FOLLOW_INPUT"
+			audio_source_name = "Audio Selector 1"
+			language_code_control = "FOLLOW_INPUT"
+			codec_settings {
+				codec = "AAC"
+				aac_settings {
+					audio_description_broadcaster_mix = "NORMAL"
+					bitrate = 96000
+					rate_control_mode = "CBR"
+					coding_mode = "CODING_MODE_2_0"
+					raw_format = "NONE"
+					sample_rate = 48000
+					specification = "MPEG4"
+					codec_profile = "LC"
+				}
 			}
-			codec_profile = "MAIN"
-			telecine = "NONE"
-			min_i_interval = 0
-			adaptive_quantization = "HIGH"
-			codec_level = "AUTO"
-			field_encoding = "PAFF"
-			scene_change_detect = "ENABLED"
-			quality_tuning_level = "SINGLE_PASS"
-			framerate_conversion_algorithm = "DUPLICATE_DROP"
-			unregistered_sei_timecode = "DISABLED"
-			gop_size_units = "FRAMES"
-			par_control = "INITIALIZE_FROM_SOURCE"
-			number_b_frames_between_reference_frames = 2
-			repeat_pps = "DISABLED"
-			dynamic_sub_gop = "STATIC"
+		}
+	
+		container_settings {
+			container = "MP4"
+			mp4_settings {
+				cslg_atom = "INCLUDE"
+				ctts_version = 0
+				free_space_box = "EXCLUDE"
+				moov_placement = "PROGRESSIVE_DOWNLOAD"
+			}
 		}
 	}
-
-	container_settings {
-		container = "MP4"
-		mp4_settings {
-			cslg_atom = "INCLUDE"
-			ctts_version = 0
-			free_space_box = "EXCLUDE"
-			moov_placement = "PROGRESSIVE_DOWNLOAD"
-		}
 	}
-  }
-}
 `, rName)
 }
 
