@@ -848,7 +848,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																Elem: &schema.Resource{
 																	Schema: map[string]*schema.Schema{
 																		"input_channels": {
-																			Type:     schema.TypeList,
+																			Type:     schema.TypeSet,
 																			Optional: true,
 																			Elem:     &schema.Schema{Type: schema.TypeInt},
 																		},
@@ -1326,6 +1326,14 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 										Optional: true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
+												"audio_buffer_model": {
+													Type:     schema.TypeString,
+													Optional: true,
+													ValidateFunc: validation.StringInSlice([]string{
+														mediaconvert.M2tsAudioBufferModelDvb,
+														mediaconvert.M2tsAudioBufferModelAtsc,
+													}, false),
+												},
 												"audio_duration": {
 													Type:     schema.TypeString,
 													Optional: true,
@@ -1342,7 +1350,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 													Type:     schema.TypeSet,
 													Optional: true,
 													Elem:     &schema.Schema{Type: schema.TypeInt},
-													Set:      schema.HashString,
 												},
 												"bitrate": {
 													Type:     schema.TypeInt,
@@ -1415,7 +1422,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 													Type:     schema.TypeSet,
 													Optional: true,
 													Elem:     &schema.Schema{Type: schema.TypeInt},
-													Set:      schema.HashString,
 												},
 												"dvb_tdt_settings": {
 													Type:     schema.TypeList,
@@ -1476,7 +1482,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 													Type:     schema.TypeInt,
 													Optional: true,
 												},
-												"min_pcr_interval": {
+												"min_ebp_interval": {
 													Type:     schema.TypeInt,
 													Optional: true,
 												},
@@ -1626,7 +1632,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 													Type:     schema.TypeSet,
 													Optional: true,
 													Elem:     &schema.Schema{Type: schema.TypeInt},
-													Set:      schema.HashString,
 												},
 												"nielsen_id3": {
 													Type:     schema.TypeString,
@@ -2265,7 +2270,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 																Optional: true,
 															},
 															"gop_size": {
-																Type:     schema.TypeInt,
+																Type:     schema.TypeFloat,
 																Optional: true,
 															},
 															"gop_size_units": {
@@ -3919,9 +3924,1531 @@ func expandMediaPresetSettings(list []interface{}) *mediaconvert.PresetSettings 
 	if v, ok := settings["caption_description"]; ok {
 		presetSettings.CaptionDescriptions = expandMediaConvertCaptionDescription(v.([]interface{}))
 	}
+	if v, ok := settings["container_settings"]; ok {
+		presetSettings.ContainerSettings = expandMediaConvertContainerSettings(v.([]interface{}))
+	}
+	if v, ok := settings["video_description"]; ok {
+		presetSettings.VideoDescription = expandMediaConvertVideoDescription(v.([]interface{}))
+	}
 
 	fmt.Println(audioDescription)
 	return presetSettings
+}
+
+func expandMediaConvertVideoDescription(list []interface{}) *mediaconvert.VideoDescription {
+	result := &mediaconvert.VideoDescription{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["afd_signaling"].(string); ok && v != "" {
+		result.AfdSignaling = aws.String(v)
+	}
+	if v, ok := tfMap["anti_alias"].(string); ok && v != "" {
+		result.AntiAlias = aws.String(v)
+	}
+	if v, ok := tfMap["codec_settings"]; ok {
+		result.CodecSettings = expandMediaConvertVideoCodecSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["color_metadata"].(string); ok && v != "" {
+		result.ColorMetadata = aws.String(v)
+	}
+	if v, ok := tfMap["crop"]; ok {
+		result.Crop = expandMediaConvertRectangle(v.([]interface{}))
+	}
+	if v, ok := tfMap["drop_frame_timecode"].(string); ok && v != "" {
+		result.DropFrameTimecode = aws.String(v)
+	}
+	if v, ok := tfMap["fixed_afd"].(int); ok {
+		result.FixedAfd = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["height"].(int); ok {
+		result.Height = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["position"]; ok {
+		result.Position = expandMediaConvertRectangle(v.([]interface{}))
+	}
+	if v, ok := tfMap["respond_to_afd"].(string); ok && v != "" {
+		result.RespondToAfd = aws.String(v)
+	}
+	if v, ok := tfMap["scaling_behavior"].(string); ok && v != "" {
+		result.ScalingBehavior = aws.String(v)
+	}
+	if v, ok := tfMap["sharpness"].(int); ok {
+		result.Sharpness = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["timecode_insertion"].(string); ok && v != "" {
+		result.TimecodeInsertion = aws.String(v)
+	}
+	if v, ok := tfMap["video_preprocessors"]; ok {
+		result.VideoPreprocessors = expandMediaConvertVideoPreprocessor(v.([]interface{}))
+	}
+	if v, ok := tfMap["width"].(int); ok {
+		result.Width = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertVideoPreprocessor(list []interface{}) *mediaconvert.VideoPreprocessor {
+	result := &mediaconvert.VideoPreprocessor{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["color_corrector"]; ok {
+		result.ColorCorrector = expandMediaConvertColorCorrector(v.([]interface{}))
+	}
+	if v, ok := tfMap["deinterlacer"]; ok {
+		result.Deinterlacer = expandMediaConvertDeinterlacer(v.([]interface{}))
+	}
+	if v, ok := tfMap["dolby_vision"]; ok {
+		result.DolbyVision = expandMediaConvertDolbyVision(v.([]interface{}))
+	}
+	if v, ok := tfMap["image_inserter"]; ok {
+		result.ImageInserter = expandMediaConvertImageInserter(v.([]interface{}))
+	}
+	if v, ok := tfMap["image_inserter"]; ok {
+		result.ImageInserter = expandMediaConvertImageInserter(v.([]interface{}))
+	}
+	if v, ok := tfMap["noise_reducer"]; ok {
+		result.NoiseReducer = expandMediaConvertNoiseReducer(v.([]interface{}))
+	}
+	if v, ok := tfMap["partner_watermaking"]; ok {
+		result.PartnerWatermarking = expandMediaConvertPartnerWatermarking(v.([]interface{}))
+	}
+	if v, ok := tfMap["timecode_burnin"]; ok {
+		result.TimecodeBurnin = expandMediaConvertTimecodeBurnin(v.([]interface{}))
+	}
+	return result
+}
+
+func expandMediaConvertTimecodeBurnin(list []interface{}) *mediaconvert.TimecodeBurnin {
+	result := &mediaconvert.TimecodeBurnin{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["font_size"].(int); ok {
+		result.FontSize = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["position"].(string); ok && v != "" {
+		result.Position = aws.String(v)
+	}
+	if v, ok := tfMap["prefix"].(string); ok && v != "" {
+		result.Prefix = aws.String(v)
+	}
+	return result
+}
+func expandMediaConvertNoiseReducer(list []interface{}) *mediaconvert.NoiseReducer {
+	result := &mediaconvert.NoiseReducer{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["filter"].(string); ok && v != "" {
+		result.Filter = aws.String(v)
+	}
+	if v, ok := tfMap["filter_settings"]; ok {
+		result.FilterSettings = expandMediaConvertNoiseReducerFilterSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["spatial_filter_settings"]; ok {
+		result.SpatialFilterSettings = expandMediaConvertNoiseReducerSpatialFilterSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["temporal_filter_settings"]; ok {
+		result.TemporalFilterSettings = expandMediaConvertNoiseReducerTemporalFilterSettings(v.([]interface{}))
+	}
+	return result
+}
+
+func expandMediaConvertPartnerWatermarking(list []interface{}) *mediaconvert.PartnerWatermarking {
+	result := &mediaconvert.PartnerWatermarking{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["nexguard_file_marker_settings"]; ok {
+		result.NexguardFileMarkerSettings = expandMediaConvertNexGuardFileMarkerSettings(v.([]interface{}))
+	}
+	return result
+}
+
+func expandMediaConvertNexGuardFileMarkerSettings(list []interface{}) *mediaconvert.NexGuardFileMarkerSettings {
+	result := &mediaconvert.NexGuardFileMarkerSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["license"].(string); ok && v != "" {
+		result.License = aws.String(v)
+	}
+	if v, ok := tfMap["payload"].(int); ok {
+		result.Payload = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["preset"].(string); ok && v != "" {
+		result.Preset = aws.String(v)
+	}
+	if v, ok := tfMap["strength"].(string); ok && v != "" {
+		result.Strength = aws.String(v)
+	}
+	return result
+}
+func expandMediaConvertNoiseReducerTemporalFilterSettings(list []interface{}) *mediaconvert.NoiseReducerTemporalFilterSettings {
+	result := &mediaconvert.NoiseReducerTemporalFilterSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["aggressive_mode"].(int); ok {
+		result.AggressiveMode = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["post_temporal_sharpening"].(string); ok && v != "" {
+		result.PostTemporalSharpening = aws.String(v)
+	}
+	if v, ok := tfMap["speed"].(int); ok {
+		result.Speed = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["strength"].(int); ok {
+		result.Strength = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertNoiseReducerSpatialFilterSettings(list []interface{}) *mediaconvert.NoiseReducerSpatialFilterSettings {
+	result := &mediaconvert.NoiseReducerSpatialFilterSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["post_filter_sharpen_strength"].(int); ok {
+		result.PostFilterSharpenStrength = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["speed"].(int); ok {
+		result.Speed = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["strength"].(int); ok {
+		result.Strength = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertNoiseReducerFilterSettings(list []interface{}) *mediaconvert.NoiseReducerFilterSettings {
+	result := &mediaconvert.NoiseReducerFilterSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["strength"].(int); ok {
+		result.Strength = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertImageInserter(list []interface{}) *mediaconvert.ImageInserter {
+	result := &mediaconvert.ImageInserter{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	results := []*mediaconvert.InsertableImage{}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["insertable_image"]; ok {
+		l := v.([]interface{})
+		for i := 0; i < len(l); i++ {
+			tmp := &mediaconvert.InsertableImage{}
+			tfMap := l[i].(map[string]interface{})
+			if v, ok := tfMap["duration"].(int); ok {
+				tmp.Duration = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["fade_in"].(int); ok {
+				tmp.FadeIn = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["fade_out"].(int); ok {
+				tmp.FadeOut = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["height"].(int); ok {
+				tmp.Height = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["image_inserter_input"].(string); ok && v != "" {
+				tmp.ImageInserterInput = aws.String(v)
+			}
+			if v, ok := tfMap["image_x"].(int); ok {
+				tmp.ImageX = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["image_y"].(int); ok {
+				tmp.ImageY = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["layer"].(int); ok {
+				tmp.Layer = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["opacity"].(int); ok {
+				tmp.Opacity = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["start_time"].(string); ok && v != "" {
+				tmp.StartTime = aws.String(v)
+			}
+			if v, ok := tfMap["width"].(int); ok {
+				tmp.Width = aws.Int64(int64(v))
+			}
+			results = append(results, tmp)
+		}
+		result.InsertableImages = results
+	}
+	return result
+}
+
+func expandMediaConvertDolbyVision(list []interface{}) *mediaconvert.DolbyVision {
+	result := &mediaconvert.DolbyVision{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+
+	if v, ok := tfMap["l6_metadata"]; ok {
+		result.L6Metadata = expandMediaConvertDolbyVisionLevel6Metadata(v.([]interface{}))
+	}
+	if v, ok := tfMap["l6_mode"].(string); ok && v != "" {
+		result.L6Mode = aws.String(v)
+	}
+	if v, ok := tfMap["profile"].(string); ok && v != "" {
+		result.Profile = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertDolbyVisionLevel6Metadata(list []interface{}) *mediaconvert.DolbyVisionLevel6Metadata {
+	result := &mediaconvert.DolbyVisionLevel6Metadata{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["max_cll"].(int); ok {
+		result.MaxCll = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["max_fall"].(int); ok {
+		result.MaxFall = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertDeinterlacer(list []interface{}) *mediaconvert.Deinterlacer {
+	result := &mediaconvert.Deinterlacer{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["algorithm"].(string); ok && v != "" {
+		result.Algorithm = aws.String(v)
+	}
+	if v, ok := tfMap["control"].(string); ok && v != "" {
+		result.Control = aws.String(v)
+	}
+	if v, ok := tfMap["mode"].(string); ok && v != "" {
+		result.Mode = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertColorCorrector(list []interface{}) *mediaconvert.ColorCorrector {
+	result := &mediaconvert.ColorCorrector{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["brightness"].(int); ok {
+		result.Brightness = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["color_space_conversion"].(string); ok && v != "" {
+		result.ColorSpaceConversion = aws.String(v)
+	}
+	if v, ok := tfMap["contrast"].(int); ok {
+		result.Contrast = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["hdr10_metadata"]; ok {
+		result.Hdr10Metadata = expandMediaConvertHdr10Metadata(v.([]interface{}))
+	}
+	if v, ok := tfMap["hue"].(int); ok {
+		result.Hue = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["saturation"].(int); ok {
+		result.Saturation = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertHdr10Metadata(list []interface{}) *mediaconvert.Hdr10Metadata {
+	result := &mediaconvert.Hdr10Metadata{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["blue_primary_x"].(int); ok {
+		result.BluePrimaryX = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["blue_primary_y"].(int); ok {
+		result.BluePrimaryY = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["green_primary_x"].(int); ok {
+		result.GreenPrimaryX = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["green_primary_y"].(int); ok {
+		result.GreenPrimaryY = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["max_content_light_level"].(int); ok {
+		result.MaxContentLightLevel = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["max_frame_average_light_level"].(int); ok {
+		result.MaxFrameAverageLightLevel = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["max_luminance"].(int); ok {
+		result.MaxLuminance = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["min_luminance"].(int); ok {
+		result.MinLuminance = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["red_primary_x"].(int); ok {
+		result.RedPrimaryX = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["red_primary_y"].(int); ok {
+		result.RedPrimaryY = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["white_point_x"].(int); ok {
+		result.WhitePointX = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["white_point_y"].(int); ok {
+		result.WhitePointY = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertRectangle(list []interface{}) *mediaconvert.Rectangle {
+	result := &mediaconvert.Rectangle{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["height"].(int); ok {
+		result.Height = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["width"].(int); ok {
+		result.Width = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["x"].(int); ok {
+		result.X = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["y"].(int); ok {
+		result.Y = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertVideoCodecSettings(list []interface{}) *mediaconvert.VideoCodecSettings {
+	result := &mediaconvert.VideoCodecSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["av1_settings"]; ok {
+		result.Av1Settings = expandMediaConvertAv1Settings(v.([]interface{}))
+	}
+	if v, ok := tfMap["avc_intra_settings"]; ok {
+		result.AvcIntraSettings = expandMediaConvertAvcIntraSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["codec"].(string); ok && v != "" {
+		result.Codec = aws.String(v)
+	}
+	if v, ok := tfMap["frame_capture_settings"]; ok {
+		result.FrameCaptureSettings = expandMediaConvertFrameCaptureSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["h264_settings"]; ok {
+		result.H264Settings = expandMediaConvertH264Settings(v.([]interface{}))
+	}
+	if v, ok := tfMap["h265_settings"]; ok {
+		result.H265Settings = expandMediaConvertH265Settings(v.([]interface{}))
+	}
+	if v, ok := tfMap["mpeg2_settings"]; ok {
+		result.Mpeg2Settings = expandMediaConvertMpeg2Settings(v.([]interface{}))
+	}
+	if v, ok := tfMap["prores_settings "]; ok {
+		result.ProresSettings = expandMediaConvertProresSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["vc3_settings"]; ok {
+		result.Vc3Settings = expandMediaConvertVc3Settings(v.([]interface{}))
+	}
+	if v, ok := tfMap["vp8_settings"]; ok {
+		result.Vp8Settings = expandMediaConvertVp8Settings(v.([]interface{}))
+	}
+	if v, ok := tfMap["vp9_settings"]; ok {
+		result.Vp9Settings = expandMediaConvertVp9Settings(v.([]interface{}))
+	}
+	return result
+}
+
+func expandMediaConvertProresSettings(list []interface{}) *mediaconvert.ProresSettings {
+	result := &mediaconvert.ProresSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["codec_profile"].(string); ok && v != "" {
+		result.CodecProfile = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["interlace_mode"].(string); ok && v != "" {
+		result.InterlaceMode = aws.String(v)
+	}
+	if v, ok := tfMap["par_control"].(string); ok && v != "" {
+		result.ParControl = aws.String(v)
+	}
+	if v, ok := tfMap["par_denominator"].(int); ok {
+		result.ParDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_numerator"].(int); ok {
+		result.ParNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["slow_pal"].(string); ok && v != "" {
+		result.SlowPal = aws.String(v)
+	}
+	if v, ok := tfMap["telecine"].(string); ok && v != "" {
+		result.Telecine = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertVc3Settings(list []interface{}) *mediaconvert.Vc3Settings {
+	result := &mediaconvert.Vc3Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["interlace_mode"].(string); ok && v != "" {
+		result.InterlaceMode = aws.String(v)
+	}
+	if v, ok := tfMap["slow_pal"].(string); ok && v != "" {
+		result.SlowPal = aws.String(v)
+	}
+	if v, ok := tfMap["telecine"].(string); ok && v != "" {
+		result.Telecine = aws.String(v)
+	}
+	if v, ok := tfMap["vc3_class"].(string); ok && v != "" {
+		result.Vc3Class = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertVp8Settings(list []interface{}) *mediaconvert.Vp8Settings {
+	result := &mediaconvert.Vp8Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["bitrate"].(int); ok {
+		result.Bitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_size"].(float32); ok {
+		result.GopSize = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["hrd_buffer_size"].(int); ok {
+		result.HrdBufferSize = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["max_bitrate"].(int); ok {
+		result.MaxBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_control"].(string); ok && v != "" {
+		result.ParControl = aws.String(v)
+	}
+	if v, ok := tfMap["par_denominator"].(int); ok {
+		result.ParDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_numerator"].(int); ok {
+		result.ParNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["quality_tuning_level"].(string); ok && v != "" {
+		result.QualityTuningLevel = aws.String(v)
+	}
+	if v, ok := tfMap["rate_control_mode"].(string); ok && v != "" {
+		result.RateControlMode = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertVp9Settings(list []interface{}) *mediaconvert.Vp9Settings {
+	result := &mediaconvert.Vp9Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["bitrate"].(int); ok {
+		result.Bitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_size"].(float32); ok {
+		result.GopSize = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["hrd_buffer_size"].(int); ok {
+		result.HrdBufferSize = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["max_bitrate"].(int); ok {
+		result.MaxBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_control"].(string); ok && v != "" {
+		result.ParControl = aws.String(v)
+	}
+	if v, ok := tfMap["par_denominator"].(int); ok {
+		result.ParDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_numerator"].(int); ok {
+		result.ParNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["quality_tuning_level"].(string); ok && v != "" {
+		result.QualityTuningLevel = aws.String(v)
+	}
+	if v, ok := tfMap["rate_control_mode"].(string); ok && v != "" {
+		result.RateControlMode = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertMpeg2Settings(list []interface{}) *mediaconvert.Mpeg2Settings {
+	result := &mediaconvert.Mpeg2Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["adaptive_quantization"].(string); ok && v != "" {
+		result.AdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["bitrate"].(int); ok {
+		result.Bitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["codec_level"].(string); ok && v != "" {
+		result.CodecLevel = aws.String(v)
+	}
+	if v, ok := tfMap["codec_profile"].(string); ok && v != "" {
+		result.CodecProfile = aws.String(v)
+	}
+	if v, ok := tfMap["dynamic_sub_gop"].(string); ok && v != "" {
+		result.DynamicSubGop = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_closed_cadence"].(int); ok {
+		result.GopClosedCadence = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_size"].(float32); ok {
+		result.GopSize = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["gop_size_units"].(string); ok && v != "" {
+		result.GopSizeUnits = aws.String(v)
+	}
+	if v, ok := tfMap["hrd_buffer_initial_fill_percentage"].(int); ok {
+		result.HrdBufferInitialFillPercentage = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["hrd_buffer_size"].(int); ok {
+		result.HrdBufferSize = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["interlace_mode"].(string); ok && v != "" {
+		result.InterlaceMode = aws.String(v)
+	}
+	if v, ok := tfMap["intra_dc_precision"].(string); ok && v != "" {
+		result.IntraDcPrecision = aws.String(v)
+	}
+	if v, ok := tfMap["max_bitrate"].(int); ok {
+		result.MaxBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["min_i_interval"].(int); ok {
+		result.MinIInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["number_b_frames_between_reference_frames"].(int); ok {
+		result.NumberBFramesBetweenReferenceFrames = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_control"].(string); ok && v != "" {
+		result.ParControl = aws.String(v)
+	}
+	if v, ok := tfMap["par_denominator"].(int); ok {
+		result.ParDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_numerator"].(int); ok {
+		result.ParNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["quality_tuning_level"].(string); ok && v != "" {
+		result.QualityTuningLevel = aws.String(v)
+	}
+	if v, ok := tfMap["rate_control_mode"].(string); ok && v != "" {
+		result.RateControlMode = aws.String(v)
+	}
+	if v, ok := tfMap["scene_change_detect"].(string); ok && v != "" {
+		result.SceneChangeDetect = aws.String(v)
+	}
+	if v, ok := tfMap["slow_pal"].(string); ok && v != "" {
+		result.SlowPal = aws.String(v)
+	}
+	if v, ok := tfMap["softness"].(int); ok {
+		result.Softness = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["spatial_adaptive_quantization"].(string); ok && v != "" {
+		result.SpatialAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["syntax"].(string); ok && v != "" {
+		result.Syntax = aws.String(v)
+	}
+	if v, ok := tfMap["telecine"].(string); ok && v != "" {
+		result.Telecine = aws.String(v)
+	}
+	if v, ok := tfMap["temporal_adaptive_quantization"].(string); ok && v != "" {
+		result.TemporalAdaptiveQuantization = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertH265Settings(list []interface{}) *mediaconvert.H265Settings {
+	result := &mediaconvert.H265Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["adaptive_quantization"].(string); ok && v != "" {
+		result.AdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["alternate_transfer_function_sei"].(string); ok && v != "" {
+		result.AlternateTransferFunctionSei = aws.String(v)
+	}
+	if v, ok := tfMap["bitrate"].(int); ok {
+		result.Bitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["codec_level"].(string); ok && v != "" {
+		result.CodecLevel = aws.String(v)
+	}
+	if v, ok := tfMap["codec_profile"].(string); ok && v != "" {
+		result.CodecProfile = aws.String(v)
+	}
+	if v, ok := tfMap["dynamic_sub_gop"].(string); ok && v != "" {
+		result.DynamicSubGop = aws.String(v)
+	}
+	if v, ok := tfMap["flicker_adaptive_quantization"].(string); ok && v != "" {
+		result.FlickerAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["flicker_adaptive_quantization"].(string); ok && v != "" {
+		result.FlickerAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_b_reference"].(string); ok && v != "" {
+		result.GopBReference = aws.String(v)
+	}
+	if v, ok := tfMap["gop_closed_cadence"].(int); ok {
+		result.GopClosedCadence = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_size"].(float32); ok {
+		result.GopSize = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["gop_size_units"].(string); ok && v != "" {
+		result.GopSizeUnits = aws.String(v)
+	}
+	if v, ok := tfMap["hrd_buffer_initial_fill_percentage"].(int); ok {
+		result.HrdBufferInitialFillPercentage = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["hrd_buffer_size"].(int); ok {
+		result.HrdBufferSize = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["interlace_mode"].(string); ok && v != "" {
+		result.InterlaceMode = aws.String(v)
+	}
+	if v, ok := tfMap["max_bitrate"].(int); ok {
+		result.MaxBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["min_i_interval"].(int); ok {
+		result.MinIInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["number_b_frames_between_reference_frames"].(int); ok {
+		result.NumberBFramesBetweenReferenceFrames = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["number_reference_frames"].(int); ok {
+		result.NumberReferenceFrames = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_control"].(string); ok && v != "" {
+		result.ParControl = aws.String(v)
+	}
+	if v, ok := tfMap["par_denominator"].(int); ok {
+		result.ParDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_numerator"].(int); ok {
+		result.ParNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["quality_tuning_level"].(string); ok && v != "" {
+		result.QualityTuningLevel = aws.String(v)
+	}
+	if v, ok := tfMap["qvbr_settings"]; ok {
+		result.QvbrSettings = expandMediaConvertH265QvbrSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["rate_control_mode"].(string); ok && v != "" {
+		result.RateControlMode = aws.String(v)
+	}
+	if v, ok := tfMap["sample_adaptive_offset_filter_mode"].(string); ok && v != "" {
+		result.SampleAdaptiveOffsetFilterMode = aws.String(v)
+	}
+	if v, ok := tfMap["scene_change_detect"].(string); ok && v != "" {
+		result.SceneChangeDetect = aws.String(v)
+	}
+	if v, ok := tfMap["slices"].(int); ok {
+		result.Slices = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["slow_pal"].(string); ok && v != "" {
+		result.SlowPal = aws.String(v)
+	}
+	if v, ok := tfMap["spatial_adaptive_quantization"].(string); ok && v != "" {
+		result.SpatialAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["telecine"].(string); ok && v != "" {
+		result.Telecine = aws.String(v)
+	}
+	if v, ok := tfMap["temporal_adaptive_quantization"].(string); ok && v != "" {
+		result.TemporalAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["temporal_ids"].(string); ok && v != "" {
+		result.TemporalIds = aws.String(v)
+	}
+	if v, ok := tfMap["tiles"].(string); ok && v != "" {
+		result.Tiles = aws.String(v)
+	}
+	if v, ok := tfMap["unregistered_sei_timecode"].(string); ok && v != "" {
+		result.UnregisteredSeiTimecode = aws.String(v)
+	}
+	if v, ok := tfMap["write_mp4_packaging_type"].(string); ok && v != "" {
+		result.WriteMp4PackagingType = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertH264Settings(list []interface{}) *mediaconvert.H264Settings {
+	result := &mediaconvert.H264Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["adaptive_quantization"].(string); ok && v != "" {
+		result.AdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["bitrate"].(int); ok {
+		result.Bitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["codec_level"].(string); ok && v != "" {
+		result.CodecLevel = aws.String(v)
+	}
+	if v, ok := tfMap["codec_profile"].(string); ok && v != "" {
+		result.CodecProfile = aws.String(v)
+	}
+	if v, ok := tfMap["dynamic_sub_gop"].(string); ok && v != "" {
+		result.DynamicSubGop = aws.String(v)
+	}
+	if v, ok := tfMap["entropy_encoding"].(string); ok && v != "" {
+		result.EntropyEncoding = aws.String(v)
+	}
+	if v, ok := tfMap["field_encoding"].(string); ok && v != "" {
+		result.FieldEncoding = aws.String(v)
+	}
+	if v, ok := tfMap["flicker_adaptive_quantization"].(string); ok && v != "" {
+		result.FlickerAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_b_reference"].(string); ok && v != "" {
+		result.GopBReference = aws.String(v)
+	}
+	if v, ok := tfMap["gop_closed_cadence"].(int); ok {
+		result.GopClosedCadence = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_size"].(float32); ok {
+		result.GopSize = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["gop_size_units"].(string); ok && v != "" {
+		result.GopSizeUnits = aws.String(v)
+	}
+	if v, ok := tfMap["hrd_buffer_initial_fill_percentage"].(int); ok {
+		result.HrdBufferInitialFillPercentage = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["hrd_buffer_size"].(int); ok {
+		result.HrdBufferSize = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["interlace_mode"].(string); ok && v != "" {
+		result.InterlaceMode = aws.String(v)
+	}
+	if v, ok := tfMap["max_bitrate"].(int); ok {
+		result.MaxBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["min_i_interval"].(int); ok {
+		result.MinIInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["number_b_frames_between_reference_frames"].(int); ok {
+		result.NumberBFramesBetweenReferenceFrames = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["number_reference_frames"].(int); ok {
+		result.NumberReferenceFrames = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_control"].(string); ok && v != "" {
+		result.ParControl = aws.String(v)
+	}
+	if v, ok := tfMap["par_denominator"].(int); ok {
+		result.ParDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["par_numerator"].(int); ok {
+		result.ParNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["quality_tuning_level"].(string); ok && v != "" {
+		result.QualityTuningLevel = aws.String(v)
+	}
+	if v, ok := tfMap["qvbr_settings"]; ok {
+		result.QvbrSettings = expandMediaConvertH264QvbrSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["rate_control_mode"].(string); ok && v != "" {
+		result.RateControlMode = aws.String(v)
+	}
+	if v, ok := tfMap["repeat_pps"].(string); ok && v != "" {
+		result.RepeatPps = aws.String(v)
+	}
+	if v, ok := tfMap["scene_change_detect"].(string); ok && v != "" {
+		result.SceneChangeDetect = aws.String(v)
+	}
+	if v, ok := tfMap["slices"].(int); ok {
+		result.Slices = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["slow_pal"].(string); ok && v != "" {
+		result.SlowPal = aws.String(v)
+	}
+	if v, ok := tfMap["softness"].(int); ok {
+		result.Softness = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["spatial_adaptive_quantization"].(string); ok && v != "" {
+		result.SpatialAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["syntax"].(string); ok && v != "" {
+		result.Syntax = aws.String(v)
+	}
+	if v, ok := tfMap["telecine"].(string); ok && v != "" {
+		result.Telecine = aws.String(v)
+	}
+	if v, ok := tfMap["temporal_adaptive_quantization"].(string); ok && v != "" {
+		result.TemporalAdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["unregistered_sei_timecode"].(string); ok && v != "" {
+		result.UnregisteredSeiTimecode = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertH265QvbrSettings(list []interface{}) *mediaconvert.H265QvbrSettings {
+	result := &mediaconvert.H265QvbrSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["max_average_bitrate"].(int); ok {
+		result.MaxAverageBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["qvbr_quality_level"].(int); ok {
+		result.QvbrQualityLevel = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["qvbr_quality_level_fine_tune"].(float32); ok {
+		result.QvbrQualityLevelFineTune = aws.Float64(float64(v))
+	}
+	return result
+}
+
+func expandMediaConvertH264QvbrSettings(list []interface{}) *mediaconvert.H264QvbrSettings {
+	result := &mediaconvert.H264QvbrSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["max_average_bitrate"].(int); ok {
+		result.MaxAverageBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["qvbr_quality_level"].(int); ok {
+		result.QvbrQualityLevel = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["qvbr_quality_level_fine_tune"].(float32); ok {
+		result.QvbrQualityLevelFineTune = aws.Float64(float64(v))
+	}
+	return result
+}
+
+func expandMediaConvertFrameCaptureSettings(list []interface{}) *mediaconvert.FrameCaptureSettings {
+	result := &mediaconvert.FrameCaptureSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["max_captures"].(int); ok {
+		result.MaxCaptures = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["quality"].(int); ok {
+		result.Quality = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertAvcIntraSettings(list []interface{}) *mediaconvert.AvcIntraSettings {
+	result := &mediaconvert.AvcIntraSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["avc_intra_class"].(string); ok && v != "" {
+		result.AvcIntraClass = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["interlace_mode"].(string); ok && v != "" {
+		result.InterlaceMode = aws.String(v)
+	}
+	if v, ok := tfMap["slow_pal"].(string); ok && v != "" {
+		result.SlowPal = aws.String(v)
+	}
+	if v, ok := tfMap["telecine"].(string); ok && v != "" {
+		result.Telecine = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertAv1Settings(list []interface{}) *mediaconvert.Av1Settings {
+	result := &mediaconvert.Av1Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["adaptive_quantization"].(string); ok && v != "" {
+		result.AdaptiveQuantization = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_control"].(string); ok && v != "" {
+		result.FramerateControl = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_conversion_algorithm"].(string); ok && v != "" {
+		result.FramerateConversionAlgorithm = aws.String(v)
+	}
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["gop_size"].(float32); ok {
+		result.GopSize = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["max_bitrate"].(int); ok {
+		result.MaxBitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["number_b_frames_between_reference_frames"].(int); ok {
+		result.NumberBFramesBetweenReferenceFrames = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["qvbr_settings"]; ok {
+		result.QvbrSettings = expandMediaConvertAv1QvbrSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["rate_control_mode"].(string); ok && v != "" {
+		result.RateControlMode = aws.String(v)
+	}
+	if v, ok := tfMap["slices"].(int); ok {
+		result.Slices = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["spatial_adaptive_quantization"].(string); ok && v != "" {
+		result.SpatialAdaptiveQuantization = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertAv1QvbrSettings(list []interface{}) *mediaconvert.Av1QvbrSettings {
+	result := &mediaconvert.Av1QvbrSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["qvbr_quality_level"].(int); ok {
+		result.QvbrQualityLevel = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["qvbr_quality_level_fine_tune"].(float32); ok {
+		result.QvbrQualityLevelFineTune = aws.Float64(float64(v))
+	}
+	return result
+}
+
+func expandMediaConvertContainerSettings(list []interface{}) *mediaconvert.ContainerSettings {
+	result := &mediaconvert.ContainerSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	containerSettingsMap := list[0].(map[string]interface{})
+	if v, ok := containerSettingsMap["cmfc_settings"]; ok {
+		result.CmfcSettings = expandMediaConvertCmfcSettings(v.([]interface{}))
+	}
+	if v, ok := containerSettingsMap["container"].(string); ok && v != "" {
+		result.Container = aws.String(v)
+	}
+	if v, ok := containerSettingsMap["f4v_settings"]; ok {
+		result.F4vSettings = expandMediaConvertF4vSettings(v.([]interface{}))
+	}
+	if v, ok := containerSettingsMap["m2ts_settings"]; ok {
+		result.M2tsSettings = expandMediaConvertM2tsSettings(v.([]interface{}))
+	}
+	if v, ok := containerSettingsMap["m3u8_settings"]; ok {
+		result.M3u8Settings = expandMediaConvertM3u8Settings(v.([]interface{}))
+	}
+	if v, ok := containerSettingsMap["mov_settings"]; ok {
+		result.MovSettings = expandMediaConvertMovSettings(v.([]interface{}))
+	}
+	if v, ok := containerSettingsMap["mp4_settings"]; ok {
+		result.Mp4Settings = expandMediaConvertMp4Settings(v.([]interface{}))
+	}
+	if v, ok := containerSettingsMap["mpd_settings"]; ok {
+		result.MpdSettings = expandMediaConvertMpdSettings(v.([]interface{}))
+	}
+	if v, ok := containerSettingsMap["mxf_settings"]; ok {
+		result.MxfSettings = expandMediaConvertMxfSettings(v.([]interface{}))
+	}
+
+	return result
+}
+
+func expandMediaConvertMxfSettings(list []interface{}) *mediaconvert.MxfSettings {
+	result := &mediaconvert.MxfSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["afd_signaling"].(string); ok && v != "" {
+		result.AfdSignaling = aws.String(v)
+	}
+	if v, ok := tfMap["profile"].(string); ok && v != "" {
+		result.Profile = aws.String(v)
+	}
+	return result
+}
+func expandMediaConvertMpdSettings(list []interface{}) *mediaconvert.MpdSettings {
+	result := &mediaconvert.MpdSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["accessibility_caption_hints"].(string); ok && v != "" {
+		result.AccessibilityCaptionHints = aws.String(v)
+	}
+	if v, ok := tfMap["audio_duration"].(string); ok && v != "" {
+		result.AudioDuration = aws.String(v)
+	}
+	if v, ok := tfMap["caption_container_type"].(string); ok && v != "" {
+		result.CaptionContainerType = aws.String(v)
+	}
+	if v, ok := tfMap["scte_35_esam"].(string); ok && v != "" {
+		result.Scte35Esam = aws.String(v)
+	}
+	if v, ok := tfMap["scte_35_source"].(string); ok && v != "" {
+		result.Scte35Source = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertMp4Settings(list []interface{}) *mediaconvert.Mp4Settings {
+	result := &mediaconvert.Mp4Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["audio_duration"].(string); ok && v != "" {
+		result.AudioDuration = aws.String(v)
+	}
+	if v, ok := tfMap["cslg_atom"].(string); ok && v != "" {
+		result.CslgAtom = aws.String(v)
+	}
+	if v, ok := tfMap["ctts_version"].(int); ok {
+		result.CttsVersion = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["free_space_box"].(string); ok && v != "" {
+		result.FreeSpaceBox = aws.String(v)
+	}
+	if v, ok := tfMap["moov_placement"].(string); ok && v != "" {
+		result.MoovPlacement = aws.String(v)
+	}
+	if v, ok := tfMap["mp4_major_brand"].(string); ok && v != "" {
+		result.Mp4MajorBrand = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertMovSettings(list []interface{}) *mediaconvert.MovSettings {
+	result := &mediaconvert.MovSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["clap_atom"].(string); ok && v != "" {
+		result.ClapAtom = aws.String(v)
+	}
+	if v, ok := tfMap["cslg_atom"].(string); ok && v != "" {
+		result.CslgAtom = aws.String(v)
+	}
+	if v, ok := tfMap["mpeg2_fourcc_control"].(string); ok && v != "" {
+		result.Mpeg2FourCCControl = aws.String(v)
+	}
+	if v, ok := tfMap["padding_control"].(string); ok && v != "" {
+		result.PaddingControl = aws.String(v)
+	}
+	if v, ok := tfMap["reference"].(string); ok && v != "" {
+		result.Reference = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertM3u8Settings(list []interface{}) *mediaconvert.M3u8Settings {
+	result := &mediaconvert.M3u8Settings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["audio_duration"].(string); ok && v != "" {
+		result.AudioDuration = aws.String(v)
+	}
+	if v, ok := tfMap["audio_frames_per_pes"].(int); ok {
+		result.AudioFramesPerPes = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["audio_pids"].(*schema.Set); ok && v.Len() > 0 {
+		result.AudioPids = expandInt64Set(v)
+	}
+	if v, ok := tfMap["nielsen_id3"].(string); ok && v != "" {
+		result.NielsenId3 = aws.String(v)
+	}
+	if v, ok := tfMap["pat_interval"].(int); ok {
+		result.PatInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["pcr_control"].(string); ok && v != "" {
+		result.PcrControl = aws.String(v)
+	}
+	if v, ok := tfMap["pcr_pid"].(int); ok {
+		result.PcrPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["pmt_interval"].(int); ok {
+		result.PmtInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["pmt_pid"].(int); ok {
+		result.PmtPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["private_metadata_pid"].(int); ok {
+		result.PrivateMetadataPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["program_number"].(int); ok {
+		result.ProgramNumber = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["scte_35_pid"].(int); ok {
+		result.Scte35Pid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["scte_35_source"].(string); ok && v != "" {
+		result.Scte35Source = aws.String(v)
+	}
+	if v, ok := tfMap["timed_metadata"].(string); ok && v != "" {
+		result.TimedMetadata = aws.String(v)
+	}
+	if v, ok := tfMap["timed_metadata_pid"].(int); ok {
+		result.TimedMetadataPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["transport_stream_id"].(int); ok {
+		result.TransportStreamId = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["video_pid"].(int); ok {
+		result.VideoPid = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertM2tsSettings(list []interface{}) *mediaconvert.M2tsSettings {
+	result := &mediaconvert.M2tsSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["audio_buffer_model"].(string); ok && v != "" {
+		result.AudioBufferModel = aws.String(v)
+	}
+	if v, ok := tfMap["audio_duration"].(string); ok && v != "" {
+		result.AudioDuration = aws.String(v)
+	}
+	if v, ok := tfMap["audio_frames_per_pes"].(int); ok {
+		result.AudioFramesPerPes = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["protocols"].(*schema.Set); ok && v.Len() > 0 {
+		result.AudioPids = expandInt64Set(v)
+	}
+	if v, ok := tfMap["bitrate"].(int); ok {
+		result.Bitrate = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["buffer_model"].(string); ok && v != "" {
+		result.BufferModel = aws.String(v)
+	}
+	if v, ok := tfMap["dvb_nit_settings"].(*schema.Set); ok && v.Len() > 0 {
+		result.DvbNitSettings = expandMediaConvertDvbNitSettings(v.List())
+	}
+	if v, ok := tfMap["dvb_sdt_settings"].(*schema.Set); ok && v.Len() > 0 {
+		result.DvbSdtSettings = expandMediaConvertDvbSdtSettings(v.List())
+	}
+	if v, ok := tfMap["dvb_sub_pids"].(*schema.Set); ok && v.Len() > 0 {
+		result.DvbSubPids = expandInt64Set(v)
+	}
+	if v, ok := tfMap["dvb_tdt_settings"].(*schema.Set); ok && v.Len() > 0 {
+		result.DvbTdtSettings = expandMediaConvertDvbTdtSettings(v.List())
+	}
+	if v, ok := tfMap["dvb_teletext_pid"].(int); ok {
+		result.DvbTeletextPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["ebp_audio_interval"].(string); ok && v != "" {
+		result.EbpAudioInterval = aws.String(tfMap["ebp_audio_interval"].(string))
+	}
+	if v, ok := tfMap["ebp_placement"].(string); ok && v != "" {
+		result.EbpPlacement = aws.String(v)
+	}
+	if v, ok := tfMap["es_rate_in_pes"].(string); ok && v != "" {
+		result.EsRateInPes = aws.String(v)
+	}
+	if v, ok := tfMap["force_ts_video_ebp_order"].(string); ok && v != "" {
+		result.ForceTsVideoEbpOrder = aws.String(v)
+	}
+	if v, ok := tfMap["fragment_time"].(float32); ok {
+		result.FragmentTime = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["max_pcr_interval"].(int); ok {
+		result.MaxPcrInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["min_ebp_interval"].(int); ok {
+		result.MinEbpInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["nielsen_id3"].(string); ok && v != "" {
+		result.NielsenId3 = aws.String(v)
+	}
+	if v, ok := tfMap["null_packet_bitrate"].(float32); ok {
+		result.NullPacketBitrate = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["pat_interval"].(int); ok {
+		result.PatInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["pcr_control"].(string); ok && v != "" {
+		result.PcrControl = aws.String(v)
+	}
+	if v, ok := tfMap["pcr_pid"].(int); ok {
+		result.PcrPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["pmt_interval"].(int); ok {
+		result.PmtInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["pmt_pid"].(int); ok {
+		result.PmtPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["private_metadata_pid"].(int); ok {
+		result.PrivateMetadataPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["program_number"].(int); ok {
+		result.ProgramNumber = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["rate_mode"].(string); ok && v != "" {
+		result.RateMode = aws.String(v)
+	}
+	if v, ok := tfMap["scte_35_esam"].(*schema.Set); ok && v.Len() > 0 {
+		result.Scte35Esam = expandMediaConvertM2tsScte35Esam(v.List())
+	}
+	if v, ok := tfMap["scte_35_pid"].(int); ok {
+		result.Scte35Pid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["scte_35_source"].(string); ok && v != "" {
+		result.Scte35Source = aws.String(v)
+	}
+	if v, ok := tfMap["segmentation_markers"].(string); ok && v != "" {
+		result.SegmentationMarkers = aws.String(v)
+	}
+	if v, ok := tfMap["segmentation_style"].(string); ok && v != "" {
+		result.SegmentationStyle = aws.String(v)
+	}
+	if v, ok := tfMap["segmentation_time"].(float32); ok {
+		result.SegmentationTime = aws.Float64(float64(v))
+	}
+	if v, ok := tfMap["timed_metadata_pid"].(int); ok {
+		result.TimedMetadataPid = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["transport_stream_id"].(int); ok {
+		result.TransportStreamId = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["video_pid"].(int); ok {
+		result.VideoPid = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertDvbTdtSettings(list []interface{}) *mediaconvert.DvbTdtSettings {
+	result := &mediaconvert.DvbTdtSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["tdt_interval"].(int); ok {
+		result.TdtInterval = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertM2tsScte35Esam(list []interface{}) *mediaconvert.M2tsScte35Esam {
+	result := &mediaconvert.M2tsScte35Esam{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["scte_35_esam_pid"].(int); ok {
+		result.Scte35EsamPid = aws.Int64(int64(v))
+	}
+	return result
+}
+func expandMediaConvertDvbNitSettings(list []interface{}) *mediaconvert.DvbNitSettings {
+	result := &mediaconvert.DvbNitSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["network_id"].(int); ok {
+		result.NetworkId = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["network_name"].(string); ok && v != "" {
+		result.NetworkName = aws.String(v)
+	}
+	if v, ok := tfMap["nit_interval"].(int); ok {
+		result.NitInterval = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertDvbSdtSettings(list []interface{}) *mediaconvert.DvbSdtSettings {
+	result := &mediaconvert.DvbSdtSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["output_sdt"].(string); ok && v != "" {
+		result.OutputSdt = aws.String(v)
+	}
+	if v, ok := tfMap["sdt_interval"].(int); ok {
+		result.SdtInterval = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["service_name"].(string); ok && v != "" {
+		result.ServiceName = aws.String(v)
+	}
+	if v, ok := tfMap["service_provider_name"].(string); ok && v != "" {
+		result.ServiceProviderName = aws.String(v)
+	}
+
+	return result
+}
+
+func expandMediaConvertF4vSettings(list []interface{}) *mediaconvert.F4vSettings {
+	result := &mediaconvert.F4vSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	f4vSettingsMap := list[0].(map[string]interface{})
+	result.MoovPlacement = aws.String(f4vSettingsMap["moov_placement"].(string))
+	return result
+}
+
+func expandMediaConvertCmfcSettings(list []interface{}) *mediaconvert.CmfcSettings {
+	result := &mediaconvert.CmfcSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	cmfcSettingsMap := list[0].(map[string]interface{})
+	result.AudioDuration = aws.String(cmfcSettingsMap["audio_duration"].(string))
+	result.Scte35Esam = aws.String(cmfcSettingsMap["scte35_esam"].(string))
+	result.Scte35Source = aws.String(cmfcSettingsMap["scte35_source"].(string))
+	return result
 }
 
 func expandMediaConvertCaptionDescription(list []interface{}) []*mediaconvert.CaptionDescriptionPreset {
@@ -3944,14 +5471,88 @@ func expandMediaConvertCaptionDestinationSettings(list []interface{}) *mediaconv
 		return result
 	}
 	captionDestinationSettingsMap := list[0].(map[string]interface{})
-	// captionDestinationSettings.BurninDestinationSettings
-	// captionDestinationSettings.DestinationType
-	// captionDestinationSettings.DvbSubDestinationSettings
-	// captionDestinationSettings.EmbeddedDestinationSettings
-	// captionDestinationSettings.ImscDestinationSettings
-	// captionDestinationSettings.SccDestinationSettings
+	result.BurninDestinationSettings = expandMediaConvertBurninDestinationSettings(captionDestinationSettingsMap["burnin_destination_settings"].([]interface{}))
+	result.DestinationType = aws.String(captionDestinationSettingsMap["destination_type"].(string))
+	result.DvbSubDestinationSettings = expandMediaConvertDvbSubDestinationSettings(captionDestinationSettingsMap["dvb_sub_destination_settings"].([]interface{}))
+	result.EmbeddedDestinationSettings = expandMediaConvertEmbeddedDestinationSettings(captionDestinationSettingsMap["embedded_destination_settings"].([]interface{}))
+	result.ImscDestinationSettings = expandMediaConvertImscDestinationSettings(captionDestinationSettingsMap["imsc_destination_settings"].([]interface{}))
+	result.SccDestinationSettings = expandMediaConvertSccDestinationSettings(captionDestinationSettingsMap["scc_destination_settings"].([]interface{}))
 	result.TeletextDestinationSettings = expandMediaConvertTeletextDestinationSettings(captionDestinationSettingsMap["teletext_destination_settings"].([]interface{}))
 	result.TtmlDestinationSettings = expandMediaConvertTtmlDestinationSettings(captionDestinationSettingsMap["ttml_destination_settings"].([]interface{}))
+	return result
+}
+
+func expandMediaConvertBurninDestinationSettings(list []interface{}) *mediaconvert.BurninDestinationSettings {
+	result := &mediaconvert.BurninDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	burninDestinationSettingsMap := list[0].(map[string]interface{})
+	result.Alignment = aws.String(burninDestinationSettingsMap["alignment"].(string))
+	result.BackgroundColor = aws.String(burninDestinationSettingsMap["background_color"].(string))
+	result.BackgroundOpacity = aws.Int64(int64(burninDestinationSettingsMap["background_opacity"].(int)))
+	result.FontColor = aws.String(burninDestinationSettingsMap["font_color"].(string))
+	result.FontOpacity = aws.Int64(int64(burninDestinationSettingsMap["font_opacity"].(int)))
+	result.FontResolution = aws.Int64(int64(burninDestinationSettingsMap["font_resolution"].(int)))
+	result.FontScript = aws.String(burninDestinationSettingsMap["font_script"].(string))
+	result.FontSize = aws.Int64(int64(burninDestinationSettingsMap["font_size"].(int)))
+	result.OutlineColor = aws.String(burninDestinationSettingsMap["outline_color"].(string))
+	result.OutlineSize = aws.Int64(int64(burninDestinationSettingsMap["outline_size"].(int)))
+	result.ShadowColor = aws.String(burninDestinationSettingsMap["shadow_color"].(string))
+	result.ShadowOpacity = aws.Int64(int64(burninDestinationSettingsMap["shadow_opacity"].(int)))
+	result.ShadowXOffset = aws.Int64(int64(burninDestinationSettingsMap["shadow_x_offset"].(int)))
+	result.ShadowYOffset = aws.Int64(int64(burninDestinationSettingsMap["shadow_y_offset"].(int)))
+	result.TeletextSpacing = aws.String(burninDestinationSettingsMap["teletext_spacing"].(string))
+	result.XPosition = aws.Int64(int64(burninDestinationSettingsMap["x_position"].(int)))
+	result.YPosition = aws.Int64(int64(burninDestinationSettingsMap["y_position"].(int)))
+	return result
+}
+
+func expandMediaConvertDvbSubDestinationSettings(list []interface{}) *mediaconvert.DvbSubDestinationSettings {
+	result := &mediaconvert.DvbSubDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	dvbSubDestinationSettingsMap := list[0].(map[string]interface{})
+	result.Alignment = aws.String(dvbSubDestinationSettingsMap["alignment"].(string))
+	result.BackgroundColor = aws.String(dvbSubDestinationSettingsMap["background_color"].(string))
+	result.BackgroundOpacity = aws.Int64(int64(dvbSubDestinationSettingsMap["background_opacity"].(int)))
+	result.FontColor = aws.String(dvbSubDestinationSettingsMap["font_color"].(string))
+	result.FontOpacity = aws.Int64(int64(dvbSubDestinationSettingsMap["font_opacity"].(int)))
+	result.FontResolution = aws.Int64(int64(dvbSubDestinationSettingsMap["font_resolution"].(int)))
+	result.FontScript = aws.String(dvbSubDestinationSettingsMap["font_script"].(string))
+	result.FontSize = aws.Int64(int64(dvbSubDestinationSettingsMap["font_size"].(int)))
+	result.OutlineColor = aws.String(dvbSubDestinationSettingsMap["outline_color"].(string))
+	result.OutlineSize = aws.Int64(int64(dvbSubDestinationSettingsMap["outline_size"].(int)))
+	result.ShadowColor = aws.String(dvbSubDestinationSettingsMap["shadow_color"].(string))
+	result.ShadowOpacity = aws.Int64(int64(dvbSubDestinationSettingsMap["shadow_opacity"].(int)))
+	result.ShadowXOffset = aws.Int64(int64(dvbSubDestinationSettingsMap["shadow_x_offset"].(int)))
+	result.ShadowYOffset = aws.Int64(int64(dvbSubDestinationSettingsMap["shadow_y_offset"].(int)))
+	result.SubtitlingType = aws.String(dvbSubDestinationSettingsMap["subtitling_type"].(string))
+	result.TeletextSpacing = aws.String(dvbSubDestinationSettingsMap["teletext_spacing"].(string))
+	result.XPosition = aws.Int64(int64(dvbSubDestinationSettingsMap["x_position"].(int)))
+	result.YPosition = aws.Int64(int64(dvbSubDestinationSettingsMap["y_position"].(int)))
+	return result
+}
+
+func expandMediaConvertEmbeddedDestinationSettings(list []interface{}) *mediaconvert.EmbeddedDestinationSettings {
+	result := &mediaconvert.EmbeddedDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	embeddedDestinationSettingsMap := list[0].(map[string]interface{})
+	result.Destination608ChannelNumber = aws.Int64(int64(embeddedDestinationSettingsMap["destination_608_channel_number"].(int)))
+	result.Destination708ServiceNumber = aws.Int64(int64(embeddedDestinationSettingsMap["destination_708_service_number"].(int)))
+	return result
+}
+
+func expandMediaConvertImscDestinationSettings(list []interface{}) *mediaconvert.ImscDestinationSettings {
+	result := &mediaconvert.ImscDestinationSettings{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	imscDestinationSettingsMap := list[0].(map[string]interface{})
+	result.StylePassthrough = aws.String(imscDestinationSettingsMap["style_passthrough"].(string))
 	return result
 }
 
@@ -4022,8 +5623,20 @@ func expandMediaConvertRemixSettings(list []interface{}) *mediaconvert.RemixSett
 func expandMediaConvertChannelMapping(list []interface{}) *mediaconvert.ChannelMapping {
 	channelMapping := list[0].(map[string]interface{})
 	result := &mediaconvert.ChannelMapping{}
-	//TODO: Test channel mapping loading
-
+	outputChannels := []*mediaconvert.OutputChannelMapping{}
+	l := channelMapping["output_channels"].([]interface{})
+	for _, tfMapRaw := range l {
+		tfMap, ok := tfMapRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		outputChannel := &mediaconvert.OutputChannelMapping{}
+		if v, ok := tfMap["input_channels"].(*schema.Set); ok && v.Len() > 0 {
+			outputChannel.InputChannels = expandInt64Set(v)
+		}
+		outputChannels = append(outputChannels, outputChannel)
+	}
+	result.OutputChannels = outputChannels
 	return result
 }
 
