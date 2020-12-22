@@ -6142,12 +6142,33 @@ func expandMediaConvertAudioChannelTagging(list []interface{}) *mediaconvert.Aud
 }
 
 func resourceAwsMediaConvertPresetRead(d *schema.ResourceData, meta interface{}) error {
-	_, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
+	conn, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
 	if err != nil {
 		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
 	}
 
 	//ignoreTagsConfig := meta.(*AWSClient).IgnoreTagsConfig
+	getOpts := &mediaconvert.GetPresetInput{
+		Name: aws.String(d.Id()),
+	}
+	resp, err := conn.GetPreset(getOpts)
+	if isAWSErr(err, mediaconvert.ErrCodeNotFoundException, "") {
+		log.Printf("[WARN] Media Convert Preset (%s) not found, removing from state", d.Id())
+		d.SetId("")
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("Error getting Media Convert Preset: %s", err)
+	}
+	d.Set("arn", resp.Preset.Arn)
+	d.Set("category", resp.Preset.Category)
+	d.Set("name", resp.Preset.Name)
+	d.Set("description", resp.Preset.Description)
+	//d.Set("settings", resp.Preset.Settings)
+	d.Set("type", resp.Preset.Type)
+	if err := d.Set("settings", flattenMediaConvertPresetSettings(resp.Preset.Settings)); err != nil {
+		return fmt.Errorf("Error setting Media Convert Queue reservation_plan_settings: %s", err)
+	}
 	return nil
 }
 
@@ -6165,4 +6186,564 @@ func resourceAwsMediaConvertPresetDelete(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
 	}
 	return nil
+}
+
+func flattenMediaConvertPresetSettings(presetSettings *mediaconvert.PresetSettings) []interface{} {
+	if presetSettings == nil {
+		return []interface{}{}
+	}
+
+	m := map[string]interface{}{
+		"audio_description":   flattenMediaConvertAudioDescription(presetSettings.AudioDescriptions),
+		"caption_description": flattenMediaConvertCaptionDescriptions(presetSettings.CaptionDescriptions),
+		"container_settings":  flattenMediaConvertContainerSettings(presetSettings.ContainerSettings),
+		"video_description":   flattenMediaConvertVideoDescription(presetSettings.VideoDescription),
+	}
+
+	return []interface{}{m}
+}
+
+func flattenMediaConvertAudioDescription(audioDescriptions []*mediaconvert.AudioDescription) []interface{} {
+	if audioDescriptions == nil {
+		return []interface{}{}
+	}
+	audioDesc := make([]interface{}, 0, len(audioDescriptions))
+	for i := 0; i < len(audioDescriptions); i++ {
+		m := map[string]interface{}{
+			"audio_source_name":    aws.StringValue(audioDesc[i].AudioSourceName),
+			"audio_type":           aws.Int64Value(audioDesc[i].AudioType),
+			"audio_type_control":   aws.StringValue(audioDesc[i].AudioTypeControl),
+			"custom_language_code": aws.StringValue(audioDesc[i].CustomLanguageCode),
+		}
+		audioDesc = append(audioDesc, m)
+	}
+	return audioDesc
+}
+
+func flattenMediaConvertCaptionDescriptions(captionDescriptions []*mediaconvert.CaptionDescriptionPreset) []interface{} {
+	if captionDescriptions == nil {
+		return []interface{}{}
+	}
+	captionDescs := make([]interface{}, 0, len(captionDescriptions))
+	for i := 0; i < len(captionDescriptions); i++ {
+		m := map[string]interface{}{
+			"custom_language_code": aws.StringValue(captionDescriptions[i].CustomLanguageCode),
+			"destination_settings": map[string]interface{}{
+				"destination_type": aws.StringValue(captionDescriptions[i].DestinationSettings.DestinationType),
+				"burnin_destination_settings": map[string]interface{}{
+					"alignment":          aws.StringValue(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.Alignment),
+					"background_color":   aws.StringValue(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.BackgroundColor),
+					"background_opacity": aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.BackgroundOpacity),
+					"font_color":         aws.StringValue(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.FontColor),
+					"font_opacity":       aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.FontOpacity),
+					"font_resolution":    aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.FontResolution),
+					"font_script":        aws.StringValue(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.FontColor),
+					"font_size":          aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.FontSize),
+					"outline_color":      aws.StringValue(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.OutlineColor),
+					"outline_size":       aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.OutlineSize),
+					"shadow_color":       aws.StringValue(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.ShadowColor),
+					"shadow_opacity":     aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.ShadowOpacity),
+					"shadow_x_offset":    aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.ShadowXOffset),
+					"shadow_y_offset":    aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.ShadowYOffset),
+					"teletext_spacing":   aws.StringValue(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.TeletextSpacing),
+					"x_position":         aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.XPosition),
+					"y_position":         aws.Int64Value(captionDescriptions[i].DestinationSettings.BurninDestinationSettings.YPosition),
+				},
+				"dvb_sub_destination_settings": map[string]interface{}{
+					"alignment":          aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.Alignment),
+					"background_color":   aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.BackgroundColor),
+					"background_opacity": aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.BackgroundOpacity),
+					"font_color":         aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.FontColor),
+					"font_opacity":       aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.FontOpacity),
+					"font_resolution":    aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.FontResolution),
+					"font_script":        aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.FontColor),
+					"font_size":          aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.FontSize),
+					"outline_color":      aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.OutlineColor),
+					"outline_size":       aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.OutlineSize),
+					"shadow_color":       aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.ShadowColor),
+					"shadow_opacity":     aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.ShadowOpacity),
+					"shadow_x_offset":    aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.ShadowXOffset),
+					"shadow_y_offset":    aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.ShadowYOffset),
+					"subtitling_type":    aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.SubtitlingType),
+					"teletext_spacing":   aws.StringValue(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.TeletextSpacing),
+					"x_position":         aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.XPosition),
+					"y_position":         aws.Int64Value(captionDescriptions[i].DestinationSettings.DvbSubDestinationSettings.YPosition),
+				},
+				"embedded_destination_settings": map[string]interface{}{
+					"destination_608_channel_number": aws.Int64Value(captionDescriptions[i].DestinationSettings.EmbeddedDestinationSettings.Destination608ChannelNumber),
+					"destination_708_service_number": aws.Int64Value(captionDescriptions[i].DestinationSettings.EmbeddedDestinationSettings.Destination708ServiceNumber),
+				},
+				"imsc_destination_settings": map[string]interface{}{
+					"style_passthrough": aws.StringValue(captionDescriptions[i].DestinationSettings.ImscDestinationSettings.StylePassthrough),
+				},
+				"scc_destination_settings": map[string]interface{}{
+					"framerate": aws.StringValue(captionDescriptions[i].DestinationSettings.SccDestinationSettings.Framerate),
+				},
+				"teletext_destination_settings": map[string]interface{}{
+					"page_number": aws.StringValue(captionDescriptions[i].DestinationSettings.TeletextDestinationSettings.PageNumber),
+					"page_types":  flattenStringSet(captionDescriptions[i].DestinationSettings.TeletextDestinationSettings.PageTypes),
+				},
+				"ttml_destination_settings": map[string]interface{}{
+					"style_passthrough": aws.StringValue(captionDescriptions[i].DestinationSettings.TtmlDestinationSettings.StylePassthrough),
+				},
+			},
+			"language_code":        aws.StringValue(captionDescriptions[i].LanguageCode),
+			"language_description": aws.StringValue(captionDescriptions[i].LanguageDescription),
+		}
+		captionDescs = append(captionDescs, m)
+	}
+
+	return captionDescs
+}
+
+func flattenMediaConvertContainerSettings(containerSettings *mediaconvert.ContainerSettings) []interface{} {
+	if containerSettings == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"cmfc_settings": map[string]interface{}{
+			"audio_duration": aws.StringValue(containerSettings.CmfcSettings.AudioDuration),
+			"scte35_esam":    aws.StringValue(containerSettings.CmfcSettings.Scte35Esam),
+			"scte35_source":  aws.StringValue(containerSettings.CmfcSettings.Scte35Source),
+		},
+		"container": aws.StringValue(containerSettings.Container),
+		"f4v_settings": map[string]interface{}{
+			"moov_placement": aws.StringValue(containerSettings.F4vSettings.MoovPlacement),
+		},
+		"m2ts_settings": map[string]interface{}{
+			"audio_buffer_model":   aws.StringValue(containerSettings.M2tsSettings.AudioBufferModel),
+			"audio_duration":       aws.StringValue(containerSettings.M2tsSettings.AudioDuration),
+			"audio_frames_per_pes": aws.Int64Value(containerSettings.M2tsSettings.AudioFramesPerPes),
+			"audio_pids":           flattenInt64Set(containerSettings.M2tsSettings.AudioPids),
+			"bitrate":              aws.Int64Value(containerSettings.M2tsSettings.Bitrate),
+			"buffer_model":         aws.StringValue(containerSettings.M2tsSettings.BufferModel),
+			"dvb_nit_settings": map[string]interface{}{
+				"network_id":   aws.Int64Value(containerSettings.M2tsSettings.DvbNitSettings.NetworkId),
+				"network_name": aws.StringValue(containerSettings.M2tsSettings.DvbNitSettings.NetworkName),
+				"nit_interval": aws.Int64Value(containerSettings.M2tsSettings.DvbNitSettings.NitInterval),
+			},
+			"dvb_sdt_settings": map[string]interface{}{
+				"output_sdt":            aws.StringValue(containerSettings.M2tsSettings.DvbSdtSettings.OutputSdt),
+				"sdt_interval":          aws.Int64Value(containerSettings.M2tsSettings.DvbSdtSettings.SdtInterval),
+				"service_name":          aws.StringValue(containerSettings.M2tsSettings.DvbSdtSettings.ServiceName),
+				"service_provider_name": aws.StringValue(containerSettings.M2tsSettings.DvbSdtSettings.ServiceProviderName),
+			},
+			"dvb_sub_pids": flattenInt64Set(containerSettings.M2tsSettings.DvbSubPids),
+			"dvb_tdt_settings": map[string]interface{}{
+				"tdt_interval": aws.Int64Value(containerSettings.M2tsSettings.DvbTdtSettings.TdtInterval),
+			},
+			"dvb_teletext_pid":         aws.Int64Value(containerSettings.M2tsSettings.DvbTeletextPid),
+			"ebp_audio_interval":       aws.StringValue(containerSettings.M2tsSettings.EbpAudioInterval),
+			"ebp_placement":            aws.StringValue(containerSettings.M2tsSettings.EbpPlacement),
+			"es_rate_in_pes":           aws.StringValue(containerSettings.M2tsSettings.EsRateInPes),
+			"force_ts_video_ebp_order": aws.StringValue(containerSettings.M2tsSettings.ForceTsVideoEbpOrder),
+			"fragment_time":            aws.Float64Value(containerSettings.M2tsSettings.FragmentTime),
+			"max_pcr_interval":         aws.Int64Value(containerSettings.M2tsSettings.MaxPcrInterval),
+			"min_ebp_interval":         aws.Int64Value(containerSettings.M2tsSettings.MinEbpInterval),
+			"nielsen_id3":              aws.StringValue(containerSettings.M2tsSettings.NielsenId3),
+			"null_packet_bitrate":      aws.Float64Value(containerSettings.M2tsSettings.NullPacketBitrate),
+			"pat_interval":             aws.Int64Value(containerSettings.M2tsSettings.PatInterval),
+			"pcr_control":              aws.StringValue(containerSettings.M2tsSettings.PcrControl),
+			"pcr_pid":                  aws.Int64Value(containerSettings.M2tsSettings.PcrPid),
+			"pmt_interval":             aws.Int64Value(containerSettings.M2tsSettings.PmtInterval),
+			"pmt_pid":                  aws.Int64Value(containerSettings.M2tsSettings.PmtPid),
+			"private_metadata_pid":     aws.Int64Value(containerSettings.M2tsSettings.PrivateMetadataPid),
+			"program_number":           aws.Int64Value(containerSettings.M2tsSettings.ProgramNumber),
+			"rate_mode":                aws.StringValue(containerSettings.M2tsSettings.RateMode),
+			"scte_35_esam": map[string]interface{}{
+				"scte_35_esam_pid": aws.Int64Value(containerSettings.M2tsSettings.Scte35Esam.Scte35EsamPid),
+			},
+			"scte_35_pid":          aws.Int64Value(containerSettings.M2tsSettings.Scte35Pid),
+			"scte_35_source":       aws.StringValue(containerSettings.M2tsSettings.Scte35Source),
+			"segmentation_markers": aws.StringValue(containerSettings.M2tsSettings.SegmentationMarkers),
+			"segmentation_style":   aws.StringValue(containerSettings.M2tsSettings.SegmentationStyle),
+			"segmentation_time":    aws.Float64Value(containerSettings.M2tsSettings.SegmentationTime),
+			"timed_metadata_pid":   aws.Int64Value(containerSettings.M2tsSettings.TimedMetadataPid),
+			"transport_stream_id":  aws.Int64Value(containerSettings.M2tsSettings.TransportStreamId),
+			"video_pid":            aws.Int64Value(containerSettings.M2tsSettings.VideoPid),
+		},
+		"m3u8_settings": map[string]interface{}{
+			"audio_duration":       aws.StringValue(containerSettings.M3u8Settings.AudioDuration),
+			"audio_frames_per_pes": aws.Int64Value(containerSettings.M3u8Settings.AudioFramesPerPes),
+			"audio_pids":           flattenInt64Set(containerSettings.M3u8Settings.AudioPids),
+			"nielsen_id3":          aws.StringValue(containerSettings.M3u8Settings.NielsenId3),
+			"pat_interval":         aws.Int64Value(containerSettings.M3u8Settings.PatInterval),
+			"pcr_control":          aws.StringValue(containerSettings.M3u8Settings.PcrControl),
+			"pcr_pid":              aws.Int64Value(containerSettings.M3u8Settings.PcrPid),
+			"pmt_interval":         aws.Int64Value(containerSettings.M3u8Settings.PmtInterval),
+			"pmt_pid":              aws.Int64Value(containerSettings.M3u8Settings.PmtPid),
+			"private_metadata_pid": aws.Int64Value(containerSettings.M3u8Settings.PrivateMetadataPid),
+			"program_number":       aws.Int64Value(containerSettings.M3u8Settings.ProgramNumber),
+			"scte_35_pid":          aws.Int64Value(containerSettings.M3u8Settings.Scte35Pid),
+			"scte_35_source":       aws.StringValue(containerSettings.M3u8Settings.Scte35Source),
+			"timed_metadata":       aws.StringValue(containerSettings.M3u8Settings.TimedMetadata),
+			"timed_metadata_pid":   aws.Int64Value(containerSettings.M3u8Settings.TimedMetadataPid),
+			"transport_stream_id":  aws.Int64Value(containerSettings.M3u8Settings.TransportStreamId),
+			"video_pid":            aws.Int64Value(containerSettings.M3u8Settings.VideoPid),
+		},
+		"mov_settings": map[string]interface{}{
+			"clap_atom":            aws.StringValue(containerSettings.MovSettings.ClapAtom),
+			"cslg_atom":            aws.StringValue(containerSettings.MovSettings.CslgAtom),
+			"mpeg2_fourcc_control": aws.StringValue(containerSettings.MovSettings.Mpeg2FourCCControl),
+			"padding_control":      aws.StringValue(containerSettings.MovSettings.PaddingControl),
+			"reference":            aws.StringValue(containerSettings.MovSettings.Reference),
+		},
+		"mp4_settings": map[string]interface{}{
+			"audio_duration":  aws.StringValue(containerSettings.Mp4Settings.AudioDuration),
+			"cslg_atom":       aws.StringValue(containerSettings.Mp4Settings.CslgAtom),
+			"ctts_version":    aws.Int64Value(containerSettings.Mp4Settings.CttsVersion),
+			"free_space_box":  aws.StringValue(containerSettings.Mp4Settings.FreeSpaceBox),
+			"moov_placement":  aws.StringValue(containerSettings.Mp4Settings.MoovPlacement),
+			"mp4_major_brand": aws.StringValue(containerSettings.Mp4Settings.Mp4MajorBrand),
+		},
+		"mpd_settings": map[string]interface{}{
+			"accessibility_caption_hints": aws.StringValue(containerSettings.MpdSettings.AccessibilityCaptionHints),
+			"audio_duration":              aws.StringValue(containerSettings.MpdSettings.AudioDuration),
+			"caption_container_type":      aws.StringValue(containerSettings.MpdSettings.CaptionContainerType),
+			"scte_35_esam":                aws.StringValue(containerSettings.MpdSettings.Scte35Esam),
+			"scte_35_source":              aws.StringValue(containerSettings.MpdSettings.Scte35Source),
+		},
+		"mxf_settings": map[string]interface{}{
+			"afd_signaling": aws.StringValue(containerSettings.MxfSettings.AfdSignaling),
+			"profile":       aws.StringValue(containerSettings.MxfSettings.Profile),
+		},
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertVideoDescription(videoDescription *mediaconvert.VideoDescription) []interface{} {
+	if videoDescription == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"afd_signaling": aws.StringValue(videoDescription.AfdSignaling),
+		"anti_alias":    aws.StringValue(videoDescription.AntiAlias),
+		"codec_settings": map[string]interface{}{
+			"av1_settings": map[string]interface{}{
+				"adaptive_quantization":                    aws.StringValue(videoDescription.CodecSettings.Av1Settings.AdaptiveQuantization),
+				"framerate_control":                        aws.StringValue(videoDescription.CodecSettings.Av1Settings.FramerateControl),
+				"framerate_conversion_algorithm":           aws.StringValue(videoDescription.CodecSettings.Av1Settings.FramerateConversionAlgorithm),
+				"framerate_denominator":                    aws.Int64Value(videoDescription.CodecSettings.Av1Settings.FramerateDenominator),
+				"framerate_numerator":                      aws.Int64Value(videoDescription.CodecSettings.Av1Settings.FramerateNumerator),
+				"gop_size":                                 aws.Float64Value(videoDescription.CodecSettings.Av1Settings.GopSize),
+				"max_bitrate":                              aws.Int64Value(videoDescription.CodecSettings.Av1Settings.MaxBitrate),
+				"number_b_frames_between_reference_frames": aws.Int64Value(videoDescription.CodecSettings.Av1Settings.NumberBFramesBetweenReferenceFrames),
+				"qvbr_settings": map[string]interface{}{
+					"qvbr_quality_level":           aws.Int64Value(videoDescription.CodecSettings.Av1Settings.QvbrSettings.QvbrQualityLevel),
+					"qvbr_quality_level_fine_tune": aws.Float64Value(videoDescription.CodecSettings.Av1Settings.QvbrSettings.QvbrQualityLevelFineTune),
+				},
+				"rate_control_mode":             aws.StringValue(videoDescription.CodecSettings.Av1Settings.RateControlMode),
+				"slices":                        aws.Int64Value(videoDescription.CodecSettings.Av1Settings.Slices),
+				"spatial_adaptive_quantization": aws.StringValue(videoDescription.CodecSettings.Av1Settings.SpatialAdaptiveQuantization),
+			},
+			"avc_intra_settings": map[string]interface{}{
+				"avc_intra_class":                aws.StringValue(videoDescription.CodecSettings.AvcIntraSettings.AvcIntraClass),
+				"framerate_control":              aws.StringValue(videoDescription.CodecSettings.AvcIntraSettings.FramerateControl),
+				"framerate_conversion_algorithm": aws.StringValue(videoDescription.CodecSettings.AvcIntraSettings.FramerateConversionAlgorithm),
+				"framerate_denominator":          aws.Int64Value(videoDescription.CodecSettings.AvcIntraSettings.FramerateDenominator),
+				"framerate_numerator":            aws.Int64Value(videoDescription.CodecSettings.AvcIntraSettings.FramerateNumerator),
+				"interlace_mode":                 aws.StringValue(videoDescription.CodecSettings.AvcIntraSettings.InterlaceMode),
+				"slow_pal":                       aws.StringValue(videoDescription.CodecSettings.AvcIntraSettings.SlowPal),
+				"telecine":                       aws.StringValue(videoDescription.CodecSettings.AvcIntraSettings.Telecine),
+			},
+			"codec": aws.StringValue(videoDescription.CodecSettings.Codec),
+			"frame_capture_settings": map[string]interface{}{
+				"framerate_denominator": aws.Int64Value(videoDescription.CodecSettings.FrameCaptureSettings.FramerateDenominator),
+				"framerate_numerator":   aws.Int64Value(videoDescription.CodecSettings.FrameCaptureSettings.FramerateNumerator),
+				"max_captures":          aws.Int64Value(videoDescription.CodecSettings.FrameCaptureSettings.MaxCaptures),
+				"quality":               aws.Int64Value(videoDescription.CodecSettings.FrameCaptureSettings.Quality),
+			},
+			"h264_settings": map[string]interface{}{
+				"adaptive_quantization":                    aws.StringValue(videoDescription.CodecSettings.H264Settings.AdaptiveQuantization),
+				"bitrate":                                  aws.Int64Value(videoDescription.CodecSettings.H264Settings.Bitrate),
+				"codec_level":                              aws.StringValue(videoDescription.CodecSettings.H264Settings.CodecLevel),
+				"codec_profile":                            aws.StringValue(videoDescription.CodecSettings.H264Settings.CodecProfile),
+				"dynamic_sub_gop":                          aws.StringValue(videoDescription.CodecSettings.H264Settings.DynamicSubGop),
+				"entropy_encoding":                         aws.StringValue(videoDescription.CodecSettings.H264Settings.EntropyEncoding),
+				"field_encoding":                           aws.StringValue(videoDescription.CodecSettings.H264Settings.FieldEncoding),
+				"flicker_adaptive_quantization":            aws.StringValue(videoDescription.CodecSettings.H264Settings.FlickerAdaptiveQuantization),
+				"framerate_control":                        aws.StringValue(videoDescription.CodecSettings.H264Settings.FramerateControl),
+				"framerate_conversion_algorithm":           aws.StringValue(videoDescription.CodecSettings.H264Settings.FramerateConversionAlgorithm),
+				"framerate_denominator":                    aws.Int64Value(videoDescription.CodecSettings.H264Settings.FramerateDenominator),
+				"framerate_numerator":                      aws.Int64Value(videoDescription.CodecSettings.H264Settings.FramerateNumerator),
+				"gop_b_reference":                          aws.StringValue(videoDescription.CodecSettings.H264Settings.GopBReference),
+				"gop_closed_cadence":                       aws.Int64Value(videoDescription.CodecSettings.H264Settings.GopClosedCadence),
+				"gop_size":                                 aws.Float64Value(videoDescription.CodecSettings.H264Settings.GopSize),
+				"gop_size_units":                           aws.StringValue(videoDescription.CodecSettings.H264Settings.GopSizeUnits),
+				"hrd_buffer_initial_fill_percentage":       aws.Int64Value(videoDescription.CodecSettings.H264Settings.HrdBufferInitialFillPercentage),
+				"hrd_buffer_size":                          aws.Int64Value(videoDescription.CodecSettings.H264Settings.HrdBufferSize),
+				"interlace_mode":                           aws.StringValue(videoDescription.CodecSettings.H264Settings.InterlaceMode),
+				"max_bitrate":                              aws.Int64Value(videoDescription.CodecSettings.H264Settings.MaxBitrate),
+				"min_i_interval":                           aws.Int64Value(videoDescription.CodecSettings.H264Settings.MinIInterval),
+				"number_b_frames_between_reference_frames": aws.Int64Value(videoDescription.CodecSettings.H264Settings.NumberBFramesBetweenReferenceFrames),
+				"number_reference_frames":                  aws.Int64Value(videoDescription.CodecSettings.H264Settings.NumberReferenceFrames),
+				"par_control":                              aws.StringValue(videoDescription.CodecSettings.H264Settings.ParControl),
+				"par_denominator":                          aws.Int64Value(videoDescription.CodecSettings.H264Settings.ParDenominator),
+				"par_numerator":                            aws.Int64Value(videoDescription.CodecSettings.H264Settings.ParNumerator),
+				"quality_tuning_level":                     aws.StringValue(videoDescription.CodecSettings.H264Settings.QualityTuningLevel),
+				"qvbr_settings": map[string]interface{}{
+					"max_average_bitrate":          aws.Int64Value(videoDescription.CodecSettings.H264Settings.QvbrSettings.MaxAverageBitrate),
+					"qvbr_quality_level":           aws.Int64Value(videoDescription.CodecSettings.H264Settings.QvbrSettings.QvbrQualityLevel),
+					"qvbr_quality_level_fine_tune": aws.Float64Value(videoDescription.CodecSettings.H264Settings.QvbrSettings.QvbrQualityLevelFineTune),
+				},
+				"rate_control_mode":              aws.StringValue(videoDescription.CodecSettings.H264Settings.RateControlMode),
+				"repeat_pps":                     aws.StringValue(videoDescription.CodecSettings.H264Settings.RepeatPps),
+				"scene_change_detect":            aws.StringValue(videoDescription.CodecSettings.H264Settings.SceneChangeDetect),
+				"slices":                         aws.Int64Value(videoDescription.CodecSettings.H264Settings.Slices),
+				"slow_pal":                       aws.StringValue(videoDescription.CodecSettings.H264Settings.SlowPal),
+				"softness":                       aws.Int64Value(videoDescription.CodecSettings.H264Settings.Softness),
+				"spatial_adaptive_quantization":  aws.StringValue(videoDescription.CodecSettings.H264Settings.SpatialAdaptiveQuantization),
+				"syntax":                         aws.StringValue(videoDescription.CodecSettings.H264Settings.Syntax),
+				"telecine":                       aws.StringValue(videoDescription.CodecSettings.H264Settings.Telecine),
+				"temporal_adaptive_quantization": aws.StringValue(videoDescription.CodecSettings.H264Settings.TemporalAdaptiveQuantization),
+				"unregistered_sei_timecode":      aws.StringValue(videoDescription.CodecSettings.H264Settings.UnregisteredSeiTimecode),
+			},
+			"h265_settings": map[string]interface{}{
+				"adaptive_quantization":                    aws.StringValue(videoDescription.CodecSettings.H265Settings.AdaptiveQuantization),
+				"alternate_transfer_function_sei":          aws.StringValue(videoDescription.CodecSettings.H265Settings.AlternateTransferFunctionSei),
+				"bitrate":                                  aws.Int64Value(videoDescription.CodecSettings.H265Settings.Bitrate),
+				"codec_level":                              aws.StringValue(videoDescription.CodecSettings.H265Settings.CodecLevel),
+				"codec_profile":                            aws.StringValue(videoDescription.CodecSettings.H265Settings.CodecProfile),
+				"dynamic_sub_gop":                          aws.StringValue(videoDescription.CodecSettings.H265Settings.DynamicSubGop),
+				"flicker_adaptive_quantization":            aws.StringValue(videoDescription.CodecSettings.H265Settings.FlickerAdaptiveQuantization),
+				"framerate_control":                        aws.StringValue(videoDescription.CodecSettings.H265Settings.FramerateControl),
+				"framerate_conversion_algorithm":           aws.StringValue(videoDescription.CodecSettings.H265Settings.FramerateConversionAlgorithm),
+				"framerate_denominator":                    aws.Int64Value(videoDescription.CodecSettings.H265Settings.FramerateDenominator),
+				"framerate_numerator":                      aws.Int64Value(videoDescription.CodecSettings.H265Settings.FramerateNumerator),
+				"gop_b_reference":                          aws.StringValue(videoDescription.CodecSettings.H265Settings.GopBReference),
+				"gop_closed_cadence":                       aws.Int64Value(videoDescription.CodecSettings.H265Settings.GopClosedCadence),
+				"gop_size":                                 aws.Float64Value(videoDescription.CodecSettings.H265Settings.GopSize),
+				"gop_size_units":                           aws.StringValue(videoDescription.CodecSettings.H265Settings.GopSizeUnits),
+				"hrd_buffer_initial_fill_percentage":       aws.Int64Value(videoDescription.CodecSettings.H265Settings.HrdBufferInitialFillPercentage),
+				"hrd_buffer_size":                          aws.Int64Value(videoDescription.CodecSettings.H265Settings.HrdBufferSize),
+				"interlace_mode":                           aws.StringValue(videoDescription.CodecSettings.H265Settings.InterlaceMode),
+				"max_bitrate":                              aws.Int64Value(videoDescription.CodecSettings.H265Settings.MaxBitrate),
+				"min_i_interval":                           aws.Int64Value(videoDescription.CodecSettings.H265Settings.MinIInterval),
+				"number_b_frames_between_reference_frames": aws.Int64Value(videoDescription.CodecSettings.H265Settings.NumberBFramesBetweenReferenceFrames),
+				"number_reference_frames":                  aws.Int64Value(videoDescription.CodecSettings.H265Settings.NumberReferenceFrames),
+				"par_control":                              aws.StringValue(videoDescription.CodecSettings.H265Settings.ParControl),
+				"par_denominator":                          aws.Int64Value(videoDescription.CodecSettings.H265Settings.ParDenominator),
+				"par_numerator":                            aws.Int64Value(videoDescription.CodecSettings.H265Settings.ParNumerator),
+				"quality_tuning_level":                     aws.StringValue(videoDescription.CodecSettings.H265Settings.QualityTuningLevel),
+				"qvbr_settings": map[string]interface{}{
+					"max_average_bitrate":          aws.Int64Value(videoDescription.CodecSettings.H265Settings.QvbrSettings.MaxAverageBitrate),
+					"qvbr_quality_level":           aws.Int64Value(videoDescription.CodecSettings.H265Settings.QvbrSettings.QvbrQualityLevel),
+					"qvbr_quality_level_fine_tune": aws.Float64Value(videoDescription.CodecSettings.H265Settings.QvbrSettings.QvbrQualityLevelFineTune),
+				},
+				"rate_control_mode":                  aws.StringValue(videoDescription.CodecSettings.H265Settings.RateControlMode),
+				"sample_adaptive_offset_filter_mode": aws.StringValue(videoDescription.CodecSettings.H265Settings.SampleAdaptiveOffsetFilterMode),
+				"scene_change_detect":                aws.StringValue(videoDescription.CodecSettings.H265Settings.SceneChangeDetect),
+				"slices":                             aws.Int64Value(videoDescription.CodecSettings.H265Settings.Slices),
+				"slow_pal":                           aws.StringValue(videoDescription.CodecSettings.H265Settings.SlowPal),
+				"spatial_adaptive_quantization":      aws.StringValue(videoDescription.CodecSettings.H265Settings.SpatialAdaptiveQuantization),
+				"telecine":                           aws.StringValue(videoDescription.CodecSettings.H265Settings.Telecine),
+				"temporal_adaptive_quantization":     aws.StringValue(videoDescription.CodecSettings.H265Settings.TemporalAdaptiveQuantization),
+				"temporal_ids":                       aws.StringValue(videoDescription.CodecSettings.H265Settings.TemporalIds),
+				"tiles":                              aws.StringValue(videoDescription.CodecSettings.H265Settings.Tiles),
+				"unregistered_sei_timecode":          aws.StringValue(videoDescription.CodecSettings.H265Settings.UnregisteredSeiTimecode),
+				"write_mp4_packaging_type":           aws.StringValue(videoDescription.CodecSettings.H265Settings.WriteMp4PackagingType),
+			},
+			"mpeg2_settings": map[string]interface{}{
+				"adaptive_quantization":                    aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.AdaptiveQuantization),
+				"bitrate":                                  aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.Bitrate),
+				"codec_level":                              aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.CodecLevel),
+				"codec_profile":                            aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.CodecProfile),
+				"dynamic_sub_gop":                          aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.DynamicSubGop),
+				"framerate_control":                        aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.FramerateControl),
+				"framerate_conversion_algorithm":           aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.FramerateConversionAlgorithm),
+				"framerate_denominator":                    aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.FramerateDenominator),
+				"framerate_numerator":                      aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.FramerateNumerator),
+				"gop_closed_cadence":                       aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.GopClosedCadence),
+				"gop_size":                                 aws.Float64Value(videoDescription.CodecSettings.Mpeg2Settings.GopSize),
+				"gop_size_units":                           aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.GopSizeUnits),
+				"hrd_buffer_initial_fill_percentage":       aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.HrdBufferInitialFillPercentage),
+				"hrd_buffer_size":                          aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.HrdBufferSize),
+				"interlace_mode":                           aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.InterlaceMode),
+				"intra_dc_precision":                       aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.IntraDcPrecision),
+				"max_bitrate":                              aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.MaxBitrate),
+				"min_i_interval":                           aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.MinIInterval),
+				"number_b_frames_between_reference_frames": aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.NumberBFramesBetweenReferenceFrames),
+				"par_control":                              aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.ParControl),
+				"par_denominator":                          aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.ParDenominator),
+				"par_numerator":                            aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.ParNumerator),
+				"quality_tuning_level":                     aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.QualityTuningLevel),
+				"rate_control_mode":                        aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.RateControlMode),
+				"scene_change_detect":                      aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.SceneChangeDetect),
+				"slowpal":                                  aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.SlowPal),
+				"softness":                                 aws.Int64Value(videoDescription.CodecSettings.Mpeg2Settings.Softness),
+				"spatial_adaptive_quantization":            aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.SpatialAdaptiveQuantization),
+				"syntax":                                   aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.Syntax),
+				"telecine":                                 aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.Telecine),
+				"temporal_adaptive_quantization":           aws.StringValue(videoDescription.CodecSettings.Mpeg2Settings.TemporalAdaptiveQuantization),
+			},
+			"prores_settings": map[string]interface{}{
+				"codec_profile":                  aws.StringValue(videoDescription.CodecSettings.ProresSettings.CodecProfile),
+				"framerate_control":              aws.StringValue(videoDescription.CodecSettings.ProresSettings.FramerateControl),
+				"framerate_conversion_algorithm": aws.StringValue(videoDescription.CodecSettings.ProresSettings.FramerateConversionAlgorithm),
+				"framerate_denominator":          aws.Int64Value(videoDescription.CodecSettings.ProresSettings.FramerateDenominator),
+				"framerate_numerator":            aws.Int64Value(videoDescription.CodecSettings.ProresSettings.FramerateNumerator),
+				"interlace_mode":                 aws.StringValue(videoDescription.CodecSettings.ProresSettings.InterlaceMode),
+				"par_control":                    aws.StringValue(videoDescription.CodecSettings.ProresSettings.ParControl),
+				"par_denominator":                aws.Int64Value(videoDescription.CodecSettings.ProresSettings.ParDenominator),
+				"par_numerator":                  aws.Int64Value(videoDescription.CodecSettings.ProresSettings.ParNumerator),
+				"slowpal":                        aws.StringValue(videoDescription.CodecSettings.ProresSettings.SlowPal),
+				"telecine":                       aws.StringValue(videoDescription.CodecSettings.ProresSettings.Telecine),
+			},
+			"vc3_settings": map[string]interface{}{
+				"framerate_control":              aws.StringValue(videoDescription.CodecSettings.Vc3Settings.FramerateControl),
+				"framerate_conversion_algorithm": aws.StringValue(videoDescription.CodecSettings.Vc3Settings.FramerateConversionAlgorithm),
+				"framerate_denominator":          aws.Int64Value(videoDescription.CodecSettings.Vc3Settings.FramerateDenominator),
+				"framerate_numerator":            aws.Int64Value(videoDescription.CodecSettings.Vc3Settings.FramerateNumerator),
+				"interlace_mode":                 aws.StringValue(videoDescription.CodecSettings.Vc3Settings.InterlaceMode),
+				"slowpal":                        aws.StringValue(videoDescription.CodecSettings.Vc3Settings.SlowPal),
+				"telecine":                       aws.StringValue(videoDescription.CodecSettings.Vc3Settings.Telecine),
+				"vc3_class":                      aws.StringValue(videoDescription.CodecSettings.Vc3Settings.Vc3Class),
+			},
+			"vp8_settings": map[string]interface{}{
+				"bitrate":                        aws.Int64Value(videoDescription.CodecSettings.Vp8Settings.Bitrate),
+				"framerate_control":              aws.StringValue(videoDescription.CodecSettings.Vp8Settings.FramerateControl),
+				"framerate_conversion_algorithm": aws.StringValue(videoDescription.CodecSettings.Vp8Settings.FramerateConversionAlgorithm),
+				"framerate_denominator":          aws.Int64Value(videoDescription.CodecSettings.Vp8Settings.FramerateDenominator),
+				"framerate_numerator":            aws.Int64Value(videoDescription.CodecSettings.Vp8Settings.FramerateNumerator),
+				"gop_size":                       aws.Float64Value(videoDescription.CodecSettings.Vp8Settings.GopSize),
+				"hrd_buffer_size":                aws.Int64Value(videoDescription.CodecSettings.Vp8Settings.HrdBufferSize),
+				"max_bitrate":                    aws.Int64Value(videoDescription.CodecSettings.Vp8Settings.MaxBitrate),
+				"par_control":                    aws.StringValue(videoDescription.CodecSettings.Vp8Settings.ParControl),
+				"par_denominator":                aws.Int64Value(videoDescription.CodecSettings.Vp8Settings.ParDenominator),
+				"par_numerator":                  aws.Int64Value(videoDescription.CodecSettings.Vp8Settings.ParNumerator),
+				"quality_tuning_level":           aws.StringValue(videoDescription.CodecSettings.Vp8Settings.QualityTuningLevel),
+				"rate_control_mode":              aws.StringValue(videoDescription.CodecSettings.Vp8Settings.RateControlMode),
+			},
+			"vp9_settings": map[string]interface{}{
+				"bitrate":                        aws.Int64Value(videoDescription.CodecSettings.Vp9Settings.Bitrate),
+				"framerate_control":              aws.StringValue(videoDescription.CodecSettings.Vp9Settings.FramerateControl),
+				"framerate_conversion_algorithm": aws.StringValue(videoDescription.CodecSettings.Vp9Settings.FramerateConversionAlgorithm),
+				"framerate_denominator":          aws.Int64Value(videoDescription.CodecSettings.Vp9Settings.FramerateDenominator),
+				"framerate_numerator":            aws.Int64Value(videoDescription.CodecSettings.Vp9Settings.FramerateNumerator),
+				"gop_size":                       aws.Float64Value(videoDescription.CodecSettings.Vp9Settings.GopSize),
+				"hrd_buffer_size":                aws.Int64Value(videoDescription.CodecSettings.Vp9Settings.HrdBufferSize),
+				"max_bitrate":                    aws.Int64Value(videoDescription.CodecSettings.Vp9Settings.MaxBitrate),
+				"par_control":                    aws.StringValue(videoDescription.CodecSettings.Vp9Settings.ParControl),
+				"par_denominator":                aws.Int64Value(videoDescription.CodecSettings.Vp9Settings.ParDenominator),
+				"par_numerator":                  aws.Int64Value(videoDescription.CodecSettings.Vp9Settings.ParNumerator),
+				"quality_tuning_level":           aws.StringValue(videoDescription.CodecSettings.Vp9Settings.QualityTuningLevel),
+				"rate_control_mode":              aws.StringValue(videoDescription.CodecSettings.Vp9Settings.RateControlMode),
+			},
+		},
+		"color_metadata": aws.StringValue(videoDescription.ColorMetadata),
+		"crop": map[string]interface{}{
+			"height": aws.Int64Value(videoDescription.Crop.Height),
+			"width":  aws.Int64Value(videoDescription.Crop.Width),
+			"x":      aws.Int64Value(videoDescription.Crop.X),
+			"y":      aws.Int64Value(videoDescription.Crop.Y),
+		},
+		"drop_frame_timecode": aws.StringValue(videoDescription.DropFrameTimecode),
+		"fixed_afd":           aws.Int64Value(videoDescription.FixedAfd),
+		"height":              aws.Int64Value(videoDescription.Height),
+		"position": map[string]interface{}{
+			"height": aws.Int64Value(videoDescription.Position.Height),
+			"width":  aws.Int64Value(videoDescription.Position.Width),
+			"x":      aws.Int64Value(videoDescription.Position.X),
+			"y":      aws.Int64Value(videoDescription.Position.Y),
+		},
+		"respond_to_afd":     aws.StringValue(videoDescription.RespondToAfd),
+		"scaling_behavior":   aws.StringValue(videoDescription.ScalingBehavior),
+		"sharpness":          aws.Int64Value(videoDescription.Sharpness),
+		"timecode_insertion": aws.StringValue(videoDescription.TimecodeInsertion),
+		"video_preprocessors": map[string]interface{}{
+			"color_corrector": map[string]interface{}{
+				"brightness":             aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Brightness),
+				"color_space_conversion": aws.StringValue(videoDescription.VideoPreprocessors.ColorCorrector.ColorSpaceConversion),
+				"contrast":               aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Contrast),
+				"hdr10_metadata": map[string]interface{}{
+					"blue_primary_x":                aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.BluePrimaryX),
+					"blue_primary_y":                aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.BluePrimaryY),
+					"green_primary_x":               aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.GreenPrimaryX),
+					"green_primary_y":               aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.GreenPrimaryY),
+					"max_content_light_level":       aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.MaxContentLightLevel),
+					"max_frame_average_light_level": aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.MaxFrameAverageLightLevel),
+					"max_luminance":                 aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.MaxLuminance),
+					"min_luminance":                 aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.MinLuminance),
+					"red_primary_x":                 aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.RedPrimaryX),
+					"red_primary_y":                 aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.RedPrimaryY),
+					"white_point_x":                 aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.WhitePointX),
+					"white_point_y":                 aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hdr10Metadata.WhitePointY),
+				},
+				"hue":        aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Hue),
+				"saturation": aws.Int64Value(videoDescription.VideoPreprocessors.ColorCorrector.Saturation),
+			},
+			"deinterlacer": map[string]interface{}{
+				"algorithm": aws.StringValue(videoDescription.VideoPreprocessors.Deinterlacer.Algorithm),
+				"control":   aws.StringValue(videoDescription.VideoPreprocessors.Deinterlacer.Control),
+				"mode":      aws.StringValue(videoDescription.VideoPreprocessors.Deinterlacer.Mode),
+			},
+			"dolby_vision": map[string]interface{}{
+				"l6_metadata": map[string]interface{}{
+					"max_cll":  aws.Int64Value(videoDescription.VideoPreprocessors.DolbyVision.L6Metadata.MaxCll),
+					"max_fall": aws.Int64Value(videoDescription.VideoPreprocessors.DolbyVision.L6Metadata.MaxFall),
+				},
+				"l6_mode": aws.StringValue(videoDescription.VideoPreprocessors.DolbyVision.L6Mode),
+				"profile": aws.StringValue(videoDescription.VideoPreprocessors.DolbyVision.Profile),
+			},
+			"image_inserter": map[string]interface{}{
+				"insertable_image": flattenMediaConvertInsertableImages(videoDescription.VideoPreprocessors.ImageInserter.InsertableImages),
+			},
+			"noise_reducer": map[string]interface{}{
+				"filter": aws.StringValue(videoDescription.VideoPreprocessors.NoiseReducer.Filter),
+				"filter_settings": map[string]interface{}{
+					"strength": aws.Int64Value(videoDescription.VideoPreprocessors.NoiseReducer.FilterSettings.Strength),
+				},
+				"spatial_filter_settings": map[string]interface{}{
+					"post_filter_sharpen_strength": aws.Int64Value(videoDescription.VideoPreprocessors.NoiseReducer.SpatialFilterSettings.PostFilterSharpenStrength),
+					"speed":                        aws.Int64Value(videoDescription.VideoPreprocessors.NoiseReducer.SpatialFilterSettings.Speed),
+					"strength":                     aws.Int64Value(videoDescription.VideoPreprocessors.NoiseReducer.SpatialFilterSettings.Strength),
+				},
+				"temporal_filter_settings": map[string]interface{}{
+					"aggressive_mode":          aws.Int64Value(videoDescription.VideoPreprocessors.NoiseReducer.TemporalFilterSettings.AggressiveMode),
+					"post_temporal_sharpening": aws.StringValue(videoDescription.VideoPreprocessors.NoiseReducer.TemporalFilterSettings.PostTemporalSharpening),
+					"speed":                    aws.Int64Value(videoDescription.VideoPreprocessors.NoiseReducer.TemporalFilterSettings.Speed),
+					"strength":                 aws.Int64Value(videoDescription.VideoPreprocessors.NoiseReducer.TemporalFilterSettings.Strength),
+				},
+			},
+			"partner_watermaking": map[string]interface{}{
+				"nexguard_file_marker_settings": map[string]interface{}{
+					"license":  aws.StringValue(videoDescription.VideoPreprocessors.PartnerWatermarking.NexguardFileMarkerSettings.License),
+					"payload":  aws.Int64Value(videoDescription.VideoPreprocessors.PartnerWatermarking.NexguardFileMarkerSettings.Payload),
+					"preset":   aws.StringValue(videoDescription.VideoPreprocessors.PartnerWatermarking.NexguardFileMarkerSettings.Preset),
+					"strength": aws.StringValue(videoDescription.VideoPreprocessors.PartnerWatermarking.NexguardFileMarkerSettings.Strength),
+				},
+			},
+			"timecode_burnin": map[string]interface{}{
+				"font_size": aws.Int64Value(videoDescription.VideoPreprocessors.TimecodeBurnin.FontSize),
+				"position":  aws.StringValue(videoDescription.VideoPreprocessors.TimecodeBurnin.Position),
+				"prefix":    aws.StringValue(videoDescription.VideoPreprocessors.TimecodeBurnin.Prefix),
+			},
+		},
+		"width": aws.Int64Value(videoDescription.Width),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertInsertableImages(insertableImages []*mediaconvert.InsertableImage) []interface{} {
+	if insertableImages == nil {
+		return []interface{}{}
+	}
+	insImgs := make([]interface{}, 0, len(insertableImages))
+	for i := 0; i < len(insertableImages); i++ {
+		m := map[string]interface{}{
+			"duration":             aws.Int64Value(insertableImages[i].Duration),
+			"fade_in":              aws.Int64Value(insertableImages[i].FadeIn),
+			"fade_out":             aws.Int64Value(insertableImages[i].FadeOut),
+			"height":               aws.Int64Value(insertableImages[i].Height),
+			"image_inserter_input": aws.StringValue(insertableImages[i].ImageInserterInput),
+			"image_x":              aws.Int64Value(insertableImages[i].ImageX),
+			"image_y":              aws.Int64Value(insertableImages[i].ImageY),
+			"layer":                aws.Int64Value(insertableImages[i].Layer),
+			"opacity":              aws.Int64Value(insertableImages[i].Opacity),
+			"start_time":           aws.StringValue(insertableImages[i].StartTime),
+			"width":                aws.Int64Value(insertableImages[i].Width),
+		}
+		insImgs = append(insImgs, m)
+	}
+	return insImgs
 }
