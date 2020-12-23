@@ -16,7 +16,6 @@ func TestAccAwsMediaConvertPreset_base(t *testing.T) {
 	var preset mediaconvert.Preset
 	resourceName := "aws_media_convert_preset.test"
 	rName := acctest.RandomWithPrefix("tf-acc-test")
-	rCategory := acctest.RandomWithPrefix("tf-acc-test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t); testAccPreCheckAWSMediaConvert(t) },
 		Providers:    testAccProviders,
@@ -26,9 +25,8 @@ func TestAccAwsMediaConvertPreset_base(t *testing.T) {
 				Config: testAccMediaConvertPresetConfig_Basic(rName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAwsMediaConvertPresetExists(resourceName, &preset),
-					testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`preset/.+`)),
+					testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`presets/.+`)),
 					resource.TestCheckResourceAttr(resourceName, "name", rName),
-					resource.TestCheckResourceAttr(resourceName, "category", rCategory),
 				),
 			},
 			{
@@ -38,13 +36,6 @@ func TestAccAwsMediaConvertPreset_base(t *testing.T) {
 			},
 		},
 	})
-	// testAccPreCheck(t)
-	// testAccPreCheckAWSMediaConvert(t)
-	// config := testAccMediaConvertPresetConfig_Basic(rName)
-	// fmt.Println(config)
-	// testAccCheckAwsMediaConvertPresetExists(resourceName, &preset)
-	// testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`preset/.+`))
-	// resource.TestCheckResourceAttr(resourceName, "category", rCategory)
 }
 
 func testAccMediaConvertPresetConfig_Basic(rName string) string {
