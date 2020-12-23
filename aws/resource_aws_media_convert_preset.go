@@ -50,7 +50,7 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 						"audio_description": {
 							Type:     schema.TypeList,
 							MinItems: 1,
-							Required: true,
+							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"audio_source_name": {
@@ -4018,7 +4018,7 @@ func expandMediaPresetSettings(list []interface{}) *mediaconvert.PresetSettings 
 func expandMediaConvertVideoDescription(list []interface{}) *mediaconvert.VideoDescription {
 	result := &mediaconvert.VideoDescription{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["afd_signaling"].(string); ok && v != "" {
@@ -5769,6 +5769,9 @@ func expandMediaConvertTtmlDestinationSettings(list []interface{}) *mediaconvert
 
 func expandMediaConvertAudioDescription(list []interface{}) []*mediaconvert.AudioDescription {
 	results := []*mediaconvert.AudioDescription{}
+	if list == nil || len(list) == 0 {
+		return nil
+	}
 	for i := 0; i < len(list); i++ {
 		audioDescription := &mediaconvert.AudioDescription{}
 		tfMap := list[i].(map[string]interface{})
