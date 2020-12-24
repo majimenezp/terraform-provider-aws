@@ -3966,11 +3966,44 @@ func resourceAwsMediaConvertPresetRead(d *schema.ResourceData, meta interface{})
 }
 
 func resourceAwsMediaConvertPresetUpdate(d *schema.ResourceData, meta interface{}) error {
-	_, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
+	conn, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
 	if err != nil {
 		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
 	}
-	return resourceAwsMediaConvertQueueRead(d, meta)
+	log.Printf("[INFO] Updating MediaConvert Preset: %s", d.Get("name").(string))
+	if d.HasChanges("description", "settings") {
+		updateOpts := &mediaconvert.UpdatePresetInput{
+			Name: aws.String(d.Id()),
+		}
+		if v, ok := d.GetOk("description"); ok {
+			updateOpts.Description = aws.String(v.(string))
+		}
+
+		if v, ok := d.GetOk("settings"); ok {
+			presetSettings := v.([]interface{})
+			updateOpts.Settings = expandMediaPresetSettings(presetSettings)
+		}
+		fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+		fmt.Println(updateOpts)
+		fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+		_, err = conn.UpdatePreset(updateOpts)
+		if isAWSErr(err, mediaconvert.ErrCodeNotFoundException, "") {
+			log.Printf("[WARN] Media Convert Preset (%s) not found, removing from state", d.Id())
+			d.SetId("")
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("Error updating Media Convert Queue: %s", err)
+		}
+	}
+
+	if d.HasChange("tags") {
+		o, n := d.GetChange("tags")
+		if err := keyvaluetags.MediaconvertUpdateTags(conn, d.Get("arn").(string), o, n); err != nil {
+			return fmt.Errorf("error updating tags: %s", err)
+		}
+	}
+	return resourceAwsMediaConvertPresetRead(d, meta)
 }
 
 func resourceAwsMediaConvertPresetDelete(d *schema.ResourceData, meta interface{}) error {
@@ -3997,7 +4030,6 @@ func expandMediaPresetSettings(list []interface{}) *mediaconvert.PresetSettings 
 		return nil
 	}
 	settings := list[0].(map[string]interface{})
-	audioDescription := &mediaconvert.AudioDescription{}
 	if v, ok := settings["audio_description"]; ok {
 		presetSettings.AudioDescriptions = expandMediaConvertAudioDescription(v.([]interface{}))
 	}
@@ -4010,8 +4042,6 @@ func expandMediaPresetSettings(list []interface{}) *mediaconvert.PresetSettings 
 	if v, ok := settings["video_description"]; ok {
 		presetSettings.VideoDescription = expandMediaConvertVideoDescription(v.([]interface{}))
 	}
-
-	fmt.Println(audioDescription)
 	return presetSettings
 }
 
