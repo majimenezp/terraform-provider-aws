@@ -1921,7 +1921,6 @@ func resourceAwsMediaConvertPreset() *schema.Resource {
 												"av1_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
-													Computed: true,
 													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
