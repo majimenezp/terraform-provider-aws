@@ -20,12 +20,19 @@ func TestAccAwsMediaConvertJobTemplate_base(t *testing.T) {
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckAwsMediaConvertJobTemplateDestroy,
 		Steps: []resource.TestStep{
-			Config: testAccMediaConvertJobTemplateConfig_Basic(rName),
-			Check: resource.ComposeTestCheckFunc(
-				testAccCheckAwsMediaConvertJobTemplateExists(resourceName, &preset),
-				testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`jobtemplate/.+`)),
-				resource.TestCheckResourceAttr(resourceName, "name", rName),
-			),
+			{
+				Config: testAccMediaConvertJobTemplateConfig_Basic(rName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAwsMediaConvertJobTemplateExists(resourceName, &jobTemplate),
+					testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`jobtemplate/.+`)),
+					resource.TestCheckResourceAttr(resourceName, "name", rName),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -41,24 +48,20 @@ func testAccMediaConvertJobTemplateConfig_Basic(rName string) string {
 		priority = 0
 		settings {
 			ad_avail_offset = 0
-			inputs = [
-				{
-					audio_selector_groups = [
-						{
-							name = "Audio Selector Group 1"
-							audio_selector_names = ["Audio Selector 1"]
-						}
-					]                
-					audio_selectors = [
-						{
+			input {
+					audio_selector_group {
+						name = "Audio Selector Group 1"
+						audio_selector_names = ["Audio Selector 1"]
+					}
+					
+					audio_selector {
 							name = "Audio Selector 1"
 							default_selection = "DEFAULT"
 							offset = 0
 							program_selection = 1
-						}
-					]                
-					caption_selectors = [
-						{
+					}
+					
+					caption_selector {
 							name = "Captions Selector 1"
 							source_settings {
 								embedded_source_settings {
@@ -69,8 +72,8 @@ func testAccMediaConvertJobTemplateConfig_Basic(rName string) string {
 								}
 								source_type = "EMBEDDED"
 							}
-						}
-					]                
+					}
+										        
 					deblock_filter = "DISABLED"
 					denoise_filter = "DISABLED"
 					filter_enable = "AUTO"
@@ -83,7 +86,6 @@ func testAccMediaConvertJobTemplateConfig_Basic(rName string) string {
 						rotate = "DEGREE_0"
 					}
 				}
-			]
 		}
 	}
 	`, rName)

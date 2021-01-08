@@ -1,9 +1,13 @@
 package aws
 
 import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/mediaconvert"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/keyvaluetags"
 )
 
 func resourceAwsMediaConvertJobTemplate() *schema.Resource {
@@ -77,7 +81,7 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"wait_minutes ": {
+						"wait_minutes": {
 							Type:         schema.TypeInt,
 							Required:     true,
 							ValidateFunc: validation.IntAtLeast(1),
@@ -147,120 +151,186 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 								},
 							},
 						},
-						"inputs": {
+						"input": {
 							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									// needed to change to a list of types to be able to parse it
-									"audio_selector_groups": {
+									"audio_selector_group": {
 										Type:     schema.TypeList,
 										Optional: true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
-												"audio_selector_group": {
-													Type:     schema.TypeList,
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"audio_selector_names": {
+													Type:     schema.TypeSet,
 													Optional: true,
-													MaxItems: 1,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"name": {
-																Type:     schema.TypeString,
-																Required: true,
-															},
-															"audio_selector_names": {
-																Type:     schema.TypeSet,
-																Optional: true,
-																Elem:     &schema.Schema{Type: schema.TypeString},
-															},
-														},
-													},
+													Elem:     &schema.Schema{Type: schema.TypeString},
 												},
 											},
 										},
 									},
-									"audio_selectors": {
+									"audio_selector": {
 										Type:     schema.TypeList,
 										Optional: true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
-												"audio_selector": {
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"custom_language_code": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringLenBetween(3, 10),
+												},
+												"default_selection": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringInSlice(mediaconvert.AudioDefaultSelection_Values(), false),
+												},
+												"external_audio_file_input": {
+													Type:     schema.TypeString,
+													Optional: true,
+												},
+												"language_code": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringInSlice(mediaconvert.LanguageCode_Values(), false),
+												},
+												"offset": {
+													Type:     schema.TypeInt,
+													Optional: true,
+												},
+												"pids": {
+													Type:     schema.TypeSet,
+													Optional: true,
+													Elem:     &schema.Schema{Type: schema.TypeInt},
+												},
+												"program_selection": {
+													Type:     schema.TypeInt,
+													Optional: true,
+												},
+												"remix_settings": {
 													Type:     schema.TypeList,
 													Optional: true,
 													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
-															"name": {
-																Type:     schema.TypeString,
-																Required: true,
-															},
-															"custom_language_code": {
-																Type:         schema.TypeString,
-																Optional:     true,
-																ValidateFunc: validation.StringLenBetween(3, 10),
-															},
-															"default_selection": {
-																Type:         schema.TypeString,
-																Optional:     true,
-																ValidateFunc: validation.StringInSlice(mediaconvert.AudioDefaultSelection_Values(), false),
-															},
-															"external_audio_file_input": {
-																Type:     schema.TypeString,
-																Optional: true,
-															},
-															"language_code": {
-																Type:         schema.TypeString,
-																Optional:     true,
-																ValidateFunc: validation.StringInSlice(mediaconvert.LanguageCode_Values(), false),
-															},
-															"offset": {
-																Type:     schema.TypeInt,
-																Optional: true,
-															},
-															"pids": {
-																Type:     schema.TypeSet,
-																Optional: true,
-																Elem:     &schema.Schema{Type: schema.TypeInt},
-															},
-															"program_selection": {
-																Type:     schema.TypeInt,
-																Optional: true,
-															},
-															"remix_settings": {
+															"channel_mapping": {
 																Type:     schema.TypeList,
 																Optional: true,
 																MaxItems: 1,
 																Elem: &schema.Resource{
 																	Schema: map[string]*schema.Schema{
-																		"channel_mapping": {
+																		"output_channel": {
 																			Type:     schema.TypeList,
 																			Optional: true,
 																			MaxItems: 1,
 																			Elem: &schema.Resource{
 																				Schema: map[string]*schema.Schema{
-																					"output_channel": {
-																						Type:     schema.TypeList,
+																					"input_channels": {
+																						Type:     schema.TypeSet,
 																						Optional: true,
-																						MaxItems: 1,
-																						Elem: &schema.Resource{
-																							Schema: map[string]*schema.Schema{
-																								"input_channels": {
-																									Type:     schema.TypeSet,
-																									Optional: true,
-																									Elem:     &schema.Schema{Type: schema.TypeInt},
-																								},
-																							},
-																						},
+																						Elem:     &schema.Schema{Type: schema.TypeInt},
+																					},
+																					"input_channels_fine_tune": {
+																						Type:     schema.TypeSet,
+																						Optional: true,
+																						Elem:     &schema.Schema{Type: schema.TypeFloat},
 																					},
 																				},
 																			},
 																		},
-																		"channels_in": {
+																	},
+																},
+															},
+															"channels_in": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+															},
+															"channels_out": {
+																Type:         schema.TypeInt,
+																Optional:     true,
+																ValidateFunc: validation.IntAtLeast(1),
+															},
+														},
+													},
+												},
+												"selector_type": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringInSlice(mediaconvert.AudioSelectorType_Values(), false),
+												},
+												"tracks": {
+													Type:     schema.TypeSet,
+													Optional: true,
+													Elem:     &schema.Schema{Type: schema.TypeInt},
+												},
+											},
+										},
+									},
+									"caption_selector": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"custom_language_code": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringLenBetween(3, 10),
+												},
+												"language_code": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringInSlice(mediaconvert.LanguageCode_Values(), false),
+												},
+												"source_settings": {
+													Type:     schema.TypeList,
+													Optional: true,
+													MaxItems: 1,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"ancillary_source_settings": {
+																Type:     schema.TypeList,
+																Optional: true,
+																MaxItems: 1,
+																Elem: &schema.Resource{
+																	Schema: map[string]*schema.Schema{
+																		"convert_608_to_708": {
+																			Type:         schema.TypeString,
+																			Optional:     true,
+																			ValidateFunc: validation.StringInSlice(mediaconvert.AncillaryConvert608To708_Values(), false),
+																		},
+																		"source_ancillary_channel_number": {
 																			Type:         schema.TypeInt,
 																			Optional:     true,
 																			ValidateFunc: validation.IntAtLeast(1),
 																		},
-																		"channels_out": {
+																		"terminate_captions": {
+																			Type:         schema.TypeString,
+																			Optional:     true,
+																			ValidateFunc: validation.StringInSlice(mediaconvert.AncillaryTerminateCaptions_Values(), false),
+																		},
+																	},
+																},
+															},
+															"dvb_sub_source_settings": {
+																Type:     schema.TypeList,
+																Optional: true,
+																MaxItems: 1,
+																Elem: &schema.Resource{
+																	Schema: map[string]*schema.Schema{
+																		"pid": {
 																			Type:         schema.TypeInt,
 																			Optional:     true,
 																			ValidateFunc: validation.IntAtLeast(1),
@@ -268,192 +338,104 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 																	},
 																},
 															},
-															"selector_type": {
-																Type:         schema.TypeString,
-																Optional:     true,
-																ValidateFunc: validation.StringInSlice(mediaconvert.AudioSelectorType_Values(), false),
-															},
-															"tracks": {
-																Type:     schema.TypeSet,
-																Optional: true,
-																Elem:     &schema.Schema{Type: schema.TypeInt},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-									"caption_selectors": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"caption_selector": {
-													Type:     schema.TypeList,
-													Optional: true,
-													MaxItems: 1,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"name": {
-																Type:     schema.TypeString,
-																Required: true,
-															},
-															"custom_language_code": {
-																Type:         schema.TypeString,
-																Optional:     true,
-																ValidateFunc: validation.StringLenBetween(3, 10),
-															},
-															"language_code": {
-																Type:         schema.TypeString,
-																Optional:     true,
-																ValidateFunc: validation.StringInSlice(mediaconvert.LanguageCode_Values(), false),
-															},
-															"source_settings": {
+															"embedded_source_settings": {
 																Type:     schema.TypeList,
 																Optional: true,
 																MaxItems: 1,
 																Elem: &schema.Resource{
 																	Schema: map[string]*schema.Schema{
-																		"ancillary_source_settings": {
-																			Type:     schema.TypeList,
-																			Optional: true,
-																			MaxItems: 1,
-																			Elem: &schema.Resource{
-																				Schema: map[string]*schema.Schema{
-																					"convert_608_to_708": {
-																						Type:         schema.TypeString,
-																						Optional:     true,
-																						ValidateFunc: validation.StringInSlice(mediaconvert.AncillaryConvert608To708_Values(), false),
-																					},
-																					"source_ancillary_channel_number": {
-																						Type:         schema.TypeInt,
-																						Optional:     true,
-																						ValidateFunc: validation.IntAtLeast(1),
-																					},
-																					"terminate_captions": {
-																						Type:         schema.TypeString,
-																						Optional:     true,
-																						ValidateFunc: validation.StringInSlice(mediaconvert.AncillaryTerminateCaptions_Values(), false),
-																					},
-																				},
-																			},
-																		},
-																		"dvb_sub_source_settings": {
-																			Type:     schema.TypeList,
-																			Optional: true,
-																			MaxItems: 1,
-																			Elem: &schema.Resource{
-																				Schema: map[string]*schema.Schema{
-																					"pid": {
-																						Type:         schema.TypeInt,
-																						Optional:     true,
-																						ValidateFunc: validation.IntAtLeast(1),
-																					},
-																				},
-																			},
-																		},
-																		"embedded_source_settings": {
-																			Type:     schema.TypeList,
-																			Optional: true,
-																			MaxItems: 1,
-																			Elem: &schema.Resource{
-																				Schema: map[string]*schema.Schema{
-																					"convert_608_to_708": {
-																						Type:         schema.TypeString,
-																						Optional:     true,
-																						ValidateFunc: validation.StringInSlice(mediaconvert.EmbeddedConvert608To708_Values(), false),
-																					},
-																					"source_608_channel_number": {
-																						Type:         schema.TypeInt,
-																						Optional:     true,
-																						ValidateFunc: validation.IntAtLeast(1),
-																					},
-																					"source_608_track_number": {
-																						Type:         schema.TypeInt,
-																						Optional:     true,
-																						ValidateFunc: validation.IntAtLeast(1),
-																					},
-																					"terminate_captions": {
-																						Type:         schema.TypeString,
-																						Optional:     true,
-																						ValidateFunc: validation.StringInSlice(mediaconvert.EmbeddedTerminateCaptions_Values(), false),
-																					},
-																				},
-																			},
-																		},
-																		"file_source_settings": {
-																			Type:     schema.TypeList,
-																			Optional: true,
-																			MaxItems: 1,
-																			Elem: &schema.Resource{
-																				Schema: map[string]*schema.Schema{
-																					"convert_608_to_708": {
-																						Type:         schema.TypeString,
-																						Optional:     true,
-																						ValidateFunc: validation.StringInSlice(mediaconvert.FileSourceConvert608To708_Values(), false),
-																					},
-																					"framerate": {
-																						Type:     schema.TypeList,
-																						Optional: true,
-																						MaxItems: 1,
-																						Elem: &schema.Resource{
-																							Schema: map[string]*schema.Schema{
-																								"framerate_denominator": {
-																									Type:         schema.TypeInt,
-																									Optional:     true,
-																									ValidateFunc: validation.IntAtLeast(1),
-																								},
-																								"framerate_numerator": {
-																									Type:         schema.TypeInt,
-																									Optional:     true,
-																									ValidateFunc: validation.IntAtLeast(1),
-																								},
-																							},
-																						},
-																					},
-																					"source_file": {
-																						Type:     schema.TypeString,
-																						Optional: true,
-																					},
-																					"time_delta": {
-																						Type:     schema.TypeInt,
-																						Optional: true,
-																					},
-																				},
-																			},
-																		},
-																		"source_type": {
+																		"convert_608_to_708": {
 																			Type:         schema.TypeString,
 																			Optional:     true,
-																			ValidateFunc: validation.StringInSlice(mediaconvert.CaptionSourceType_Values(), false),
+																			ValidateFunc: validation.StringInSlice(mediaconvert.EmbeddedConvert608To708_Values(), false),
 																		},
-																		"teletext_source_settings": {
+																		"source_608_channel_number": {
+																			Type:         schema.TypeInt,
+																			Optional:     true,
+																			ValidateFunc: validation.IntAtLeast(1),
+																		},
+																		"source_608_track_number": {
+																			Type:         schema.TypeInt,
+																			Optional:     true,
+																			ValidateFunc: validation.IntAtLeast(1),
+																		},
+																		"terminate_captions": {
+																			Type:         schema.TypeString,
+																			Optional:     true,
+																			ValidateFunc: validation.StringInSlice(mediaconvert.EmbeddedTerminateCaptions_Values(), false),
+																		},
+																	},
+																},
+															},
+															"file_source_settings": {
+																Type:     schema.TypeList,
+																Optional: true,
+																MaxItems: 1,
+																Elem: &schema.Resource{
+																	Schema: map[string]*schema.Schema{
+																		"convert_608_to_708": {
+																			Type:         schema.TypeString,
+																			Optional:     true,
+																			ValidateFunc: validation.StringInSlice(mediaconvert.FileSourceConvert608To708_Values(), false),
+																		},
+																		"framerate": {
 																			Type:     schema.TypeList,
 																			Optional: true,
 																			MaxItems: 1,
 																			Elem: &schema.Resource{
 																				Schema: map[string]*schema.Schema{
-																					"page_number": {
-																						Type:     schema.TypeString,
-																						Optional: true,
+																					"framerate_denominator": {
+																						Type:         schema.TypeInt,
+																						Optional:     true,
+																						ValidateFunc: validation.IntAtLeast(1),
 																					},
-																				},
-																			},
-																		},
-																		"track_source_settings": {
-																			Type:     schema.TypeList,
-																			Optional: true,
-																			MaxItems: 1,
-																			Elem: &schema.Resource{
-																				Schema: map[string]*schema.Schema{
-																					"track_number": {
+																					"framerate_numerator": {
 																						Type:         schema.TypeInt,
 																						Optional:     true,
 																						ValidateFunc: validation.IntAtLeast(1),
 																					},
 																				},
 																			},
+																		},
+																		"source_file": {
+																			Type:     schema.TypeString,
+																			Optional: true,
+																		},
+																		"time_delta": {
+																			Type:     schema.TypeInt,
+																			Optional: true,
+																		},
+																	},
+																},
+															},
+															"source_type": {
+																Type:         schema.TypeString,
+																Optional:     true,
+																ValidateFunc: validation.StringInSlice(mediaconvert.CaptionSourceType_Values(), false),
+															},
+															"teletext_source_settings": {
+																Type:     schema.TypeList,
+																Optional: true,
+																MaxItems: 1,
+																Elem: &schema.Resource{
+																	Schema: map[string]*schema.Schema{
+																		"page_number": {
+																			Type:     schema.TypeString,
+																			Optional: true,
+																		},
+																	},
+																},
+															},
+															"track_source_settings": {
+																Type:     schema.TypeList,
+																Optional: true,
+																MaxItems: 1,
+																Elem: &schema.Resource{
+																	Schema: map[string]*schema.Schema{
+																		"track_number": {
+																			Type:         schema.TypeInt,
+																			Optional:     true,
+																			ValidateFunc: validation.IntAtLeast(1),
 																		},
 																	},
 																},
@@ -4824,7 +4806,7 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 																	},
 																},
 															},
-															"Width ": {
+															"width": {
 																Type:         schema.TypeInt,
 																Optional:     true,
 																ValidateFunc: validation.IntAtLeast(32),
@@ -4897,10 +4879,6 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 	}
 }
 
-func resourceAwsMediaConvertJobTemplateCreate(d *schema.ResourceData, meta interface{}) error {
-	return resourceAwsMediaConvertJobTemplateRead(d, meta)
-}
-
 func resourceAwsMediaConvertJobTemplateRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
@@ -4911,4 +4889,599 @@ func resourceAwsMediaConvertJobTemplateUpdate(d *schema.ResourceData, meta inter
 
 func resourceAwsMediaConvertJobTemplateDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
+}
+
+func resourceAwsMediaConvertJobTemplateCreate(d *schema.ResourceData, meta interface{}) error {
+	conn, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
+	if err != nil {
+		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
+	}
+	settings := &mediaconvert.JobTemplateSettings{}
+	if attr, ok := d.GetOk("settings"); ok {
+		settings = expandMediaConvertJobTemplateSettings(attr.([]interface{}))
+	}
+
+	accelerationSettings := &mediaconvert.AccelerationSettings{}
+	if attr, ok := d.GetOk("acceleration_settings"); ok {
+		accelerationSettings = expandMediaConvertJobTemplateAccelerationSettings(attr.([]interface{}))
+	}
+	hopDestinations := make([]*mediaconvert.HopDestination, 0)
+	if attr, ok := d.GetOk("hop_destinations"); ok {
+		hopDestinations = expandMediaConvertJobTemplateHopDestinations(attr.([]interface{}))
+	}
+	input := &mediaconvert.CreateJobTemplateInput{
+		AccelerationSettings: accelerationSettings,
+		Category:             aws.String(d.Get("category").(string)),
+		Description:          aws.String(d.Get("description").(string)),
+		HopDestinations:      hopDestinations,
+		Name:                 aws.String(d.Get("name").(string)),
+		Priority:             aws.Int64(d.Get("name").(int64)),
+		Queue:                aws.String(d.Get("queue").(string)),
+		Settings:             settings,
+		StatusUpdateInterval: aws.String(d.Get("status_update_interval").(string)),
+		Tags:                 keyvaluetags.New(d.Get("tags").(map[string]interface{})).IgnoreAws().MediaconvertTags(),
+	}
+	resp, err := conn.CreateJobTemplate(input)
+	if err != nil {
+		return fmt.Errorf("Error creating Media Convert Job Template: %s", err)
+	}
+	d.SetId(aws.StringValue(resp.JobTemplate.Name))
+
+	return resourceAwsMediaConvertJobTemplateRead(d, meta)
+}
+
+func expandMediaConvertJobTemplateSettings(list []interface{}) *mediaconvert.JobTemplateSettings {
+
+	result := &mediaconvert.JobTemplateSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["ad_avail_offset"].(int); ok {
+		result.AdAvailOffset = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["avail_blanking"]; ok {
+		result.AvailBlanking = expandMediaConvertAvailBlanking(v.([]interface{}))
+	}
+	if v, ok := tfMap["esam"]; ok {
+		result.Esam = expandMediaConvertEsamSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["input"]; ok {
+		result.Inputs = expandMediaConvertInputTemplate(v.([]interface{}))
+	}
+	fmt.Println(tfMap)
+	return result
+}
+
+func expandMediaConvertInputTemplate(list []interface{}) []*mediaconvert.InputTemplate {
+	results := []*mediaconvert.InputTemplate{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	for i := 0; i < len(list); i++ {
+		result := &mediaconvert.InputTemplate{}
+		tfMap := list[i].(map[string]interface{})
+		if v, ok := tfMap["audio_selector_group"]; ok {
+			result.AudioSelectorGroups = expandMediaConvertAudioSelectorGroups(v.([]interface{}))
+		}
+		if v, ok := tfMap["audio_selector"]; ok {
+			result.AudioSelectors = expandMediaConvertAudioSelector(v.([]interface{}))
+		}
+		if v, ok := tfMap["caption_selector"]; ok {
+			result.CaptionSelectors = expandMediaConvertCaptionSelector(v.([]interface{}))
+		}
+		if v, ok := tfMap["crop"]; ok {
+			result.Crop = expandMediaConvertRectangle(v.([]interface{}))
+		}
+		if v, ok := tfMap["deblock_filter"].(string); ok && v != "" {
+			result.DeblockFilter = aws.String(v)
+		}
+		if v, ok := tfMap["denoise_filter"].(string); ok && v != "" {
+			result.DenoiseFilter = aws.String(v)
+		}
+		if v, ok := tfMap["filter_enable"].(string); ok && v != "" {
+			result.FilterEnable = aws.String(v)
+		}
+		if v, ok := tfMap["filter_strength"].(int); ok {
+			result.FilterStrength = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["image_inserter"]; ok {
+			result.ImageInserter = expandMediaConvertImageInserter(v.([]interface{}))
+		}
+		if v, ok := tfMap["input_clippings"]; ok {
+			result.InputClippings = expandMediaConvertInputClipping(v.([]interface{}))
+		}
+		if v, ok := tfMap["input_scan_type"].(string); ok && v != "" {
+			result.InputScanType = aws.String(v)
+		}
+		if v, ok := tfMap["position"]; ok {
+			result.Position = expandMediaConvertRectangle(v.([]interface{}))
+		}
+		if v, ok := tfMap["program_number"].(int); ok {
+			result.ProgramNumber = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["psi_control"].(string); ok && v != "" {
+			result.PsiControl = aws.String(v)
+		}
+		if v, ok := tfMap["timecode_source"].(string); ok && v != "" {
+			result.TimecodeSource = aws.String(v)
+		}
+		if v, ok := tfMap["timecode_start"].(string); ok && v != "" {
+			result.TimecodeStart = aws.String(v)
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
+func expandMediaConvertInputClipping(list []interface{}) []*mediaconvert.InputClipping {
+	results := []*mediaconvert.InputClipping{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	for i := 0; i < len(list); i++ {
+		result := &mediaconvert.InputClipping{}
+		tfMap := list[i].(map[string]interface{})
+		if v, ok := tfMap["end_timecode"].(string); ok && v != "" {
+			result.EndTimecode = aws.String(v)
+		}
+		if v, ok := tfMap["start_timecode"].(string); ok && v != "" {
+			result.StartTimecode = aws.String(v)
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
+func expandMediaConvertImageInserter(list []interface{}) *mediaconvert.ImageInserter {
+	result := &mediaconvert.ImageInserter{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["insertable_images"]; ok {
+		result.InsertableImages = expandMediaConvertInsertableImage(v.([]interface{}))
+	}
+	return result
+}
+
+func expandMediaConvertInsertableImage(list []interface{}) []*mediaconvert.InsertableImage {
+	results := []*mediaconvert.InsertableImage{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	for i := 0; i < len(list); i++ {
+		result := &mediaconvert.InsertableImage{}
+		tfMap := list[i].(map[string]interface{})
+		if v, ok := tfMap["duration"].(int); ok {
+			result.Duration = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["fade_in"].(int); ok {
+			result.FadeIn = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["fade_out"].(int); ok {
+			result.FadeOut = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["height"].(int); ok {
+			result.Height = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["image_inserter_input"].(string); ok && v != "" {
+			result.ImageInserterInput = aws.String(v)
+		}
+		if v, ok := tfMap["image_x"].(int); ok {
+			result.ImageX = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["image_y"].(int); ok {
+			result.ImageY = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["layer"].(int); ok {
+			result.Layer = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["opacity"].(int); ok {
+			result.Opacity = aws.Int64(int64(v))
+		}
+		if v, ok := tfMap["start_time"].(string); ok && v != "" {
+			result.StartTime = aws.String(v)
+		}
+		if v, ok := tfMap["width"].(int); ok {
+			result.Width = aws.Int64(int64(v))
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
+func expandMediaConvertCaptionSelector(list []interface{}) map[string]*mediaconvert.CaptionSelector {
+	results := map[string]*mediaconvert.CaptionSelector{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	for i := 0; i < len(list); i++ {
+		result := &mediaconvert.CaptionSelector{}
+		tfMap := list[i].(map[string]interface{})
+		currentName := ""
+		if v, ok := tfMap["name"].(string); ok && v != "" {
+			currentName = v
+			if v, ok := tfMap["name"].(string); ok && v != "" {
+				currentName = v
+			}
+			if v, ok := tfMap["custom_language_code"].(string); ok && v != "" {
+				result.CustomLanguageCode = aws.String(v)
+			}
+			if v, ok := tfMap["language_code"].(string); ok && v != "" {
+				result.LanguageCode = aws.String(v)
+			}
+			if v, ok := tfMap["source_settings"]; ok {
+				result.SourceSettings = expandMediaConvertCaptionSourceSettings(v.([]interface{}))
+			}
+			if len(currentName) > 0 {
+				results[currentName] = result
+			}
+		}
+	}
+	return results
+}
+
+func expandMediaConvertCaptionSourceSettings(list []interface{}) *mediaconvert.CaptionSourceSettings {
+	result := &mediaconvert.CaptionSourceSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["ancillary_source_settings"]; ok {
+		result.AncillarySourceSettings = expandMediaConvertAncillarySourceSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["dvb_sub_source_settings"]; ok {
+		result.DvbSubSourceSettings = expandMediaConvertDvbSubSourceSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["embedded_source_settings"]; ok {
+		result.EmbeddedSourceSettings = expandMediaConvertEmbeddedSourceSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["file_source_settings"]; ok {
+		result.FileSourceSettings = expandMediaConvertFileSourceSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["source_type"].(string); ok && v != "" {
+		result.SourceType = aws.String(v)
+	}
+	if v, ok := tfMap["teletext_source_settings"]; ok {
+		result.TeletextSourceSettings = expandMediaConvertTeletextSourceSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["track_source_settings"]; ok {
+		result.TrackSourceSettings = expandMediaConvertTrackSourceSettings(v.([]interface{}))
+	}
+	return result
+}
+
+func expandMediaConvertTeletextSourceSettings(list []interface{}) *mediaconvert.TeletextSourceSettings {
+	result := &mediaconvert.TeletextSourceSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+
+	if v, ok := tfMap["page_number"].(string); ok && v != "" {
+		result.PageNumber = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertTrackSourceSettings(list []interface{}) *mediaconvert.TrackSourceSettings {
+	result := &mediaconvert.TrackSourceSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["track_number"].(int); ok {
+		result.TrackNumber = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertFileSourceSettings(list []interface{}) *mediaconvert.FileSourceSettings {
+	result := &mediaconvert.FileSourceSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+
+	if v, ok := tfMap["convert_608_to_708"].(string); ok && v != "" {
+		result.Convert608To708 = aws.String(v)
+	}
+	if v, ok := tfMap["framerate"]; ok {
+		result.Framerate = expandMediaConvertCaptionSourceFramerate(v.([]interface{}))
+	}
+	if v, ok := tfMap["source_file"].(string); ok && v != "" {
+		result.SourceFile = aws.String(v)
+	}
+	if v, ok := tfMap["time_delta"].(int); ok {
+		result.TimeDelta = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertCaptionSourceFramerate(list []interface{}) *mediaconvert.CaptionSourceFramerate {
+	result := &mediaconvert.CaptionSourceFramerate{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["framerate_denominator"].(int); ok {
+		result.FramerateDenominator = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["framerate_numerator"].(int); ok {
+		result.FramerateNumerator = aws.Int64(int64(v))
+	}
+
+	return result
+}
+
+func expandMediaConvertEmbeddedSourceSettings(list []interface{}) *mediaconvert.EmbeddedSourceSettings {
+	result := &mediaconvert.EmbeddedSourceSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+
+	if v, ok := tfMap["convert_608_to_708"].(string); ok && v != "" {
+		result.Convert608To708 = aws.String(v)
+	}
+	if v, ok := tfMap["source_608_channel_number"].(int); ok {
+		result.Source608ChannelNumber = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["source_608_track_number"].(int); ok {
+		result.Source608TrackNumber = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["terminate_captions"].(string); ok && v != "" {
+		result.TerminateCaptions = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertDvbSubSourceSettings(list []interface{}) *mediaconvert.DvbSubSourceSettings {
+	result := &mediaconvert.DvbSubSourceSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["pid"].(int); ok {
+		result.Pid = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertAncillarySourceSettings(list []interface{}) *mediaconvert.AncillarySourceSettings {
+	result := &mediaconvert.AncillarySourceSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+
+	if v, ok := tfMap["convert_608_to_708"].(string); ok && v != "" {
+		result.Convert608To708 = aws.String(v)
+	}
+	if v, ok := tfMap["source_ancillary_channel_number"].(int); ok {
+		result.SourceAncillaryChannelNumber = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["terminate_captions"].(string); ok && v != "" {
+		result.TerminateCaptions = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertAudioSelector(list []interface{}) map[string]*mediaconvert.AudioSelector {
+	results := map[string]*mediaconvert.AudioSelector{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	for i := 0; i < len(list); i++ {
+		result := &mediaconvert.AudioSelector{}
+		tfMap := list[i].(map[string]interface{})
+		currentName := ""
+		if v, ok := tfMap["name"].(string); ok && v != "" {
+			currentName = v
+			if v, ok := tfMap["name"].(string); ok && v != "" {
+				currentName = v
+			}
+			if v, ok := tfMap["custom_language_code"].(string); ok && v != "" {
+				result.CustomLanguageCode = aws.String(v)
+			}
+			if v, ok := tfMap["default_selection"].(string); ok && v != "" {
+				result.DefaultSelection = aws.String(v)
+			}
+			if v, ok := tfMap["external_audio_file_input"].(string); ok && v != "" {
+				result.ExternalAudioFileInput = aws.String(v)
+			}
+			if v, ok := tfMap["language_code"].(string); ok && v != "" {
+				result.LanguageCode = aws.String(v)
+			}
+			if v, ok := tfMap["offset"].(int); ok {
+				result.Offset = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["pids"].(*schema.Set); ok && v.Len() > 0 {
+				result.Pids = expandInt64Set(v)
+			}
+			if v, ok := tfMap["program_selection"].(int); ok {
+				result.ProgramSelection = aws.Int64(int64(v))
+			}
+			if v, ok := tfMap["remix_settings"]; ok {
+				result.RemixSettings = expandMediaConvertRemixSettings(v.([]interface{}))
+			}
+			if v, ok := tfMap["selector_type"].(string); ok && v != "" {
+				result.SelectorType = aws.String(v)
+			}
+			if v, ok := tfMap["tracks"].(*schema.Set); ok && v.Len() > 0 {
+				result.Tracks = expandInt64Set(v)
+			}
+			if len(currentName) > 0 {
+				results[currentName] = result
+			}
+		}
+	}
+	return results
+}
+
+func expandMediaConvertRemixSettings(list []interface{}) *mediaconvert.RemixSettings {
+	result := &mediaconvert.RemixSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["channel_mapping"]; ok {
+		result.ChannelMapping = expandMediaConvertChannelMapping(v.([]interface{}))
+	}
+	if v, ok := tfMap["channels_in"].(int); ok {
+		result.ChannelsIn = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["channels_out"].(int); ok {
+		result.ChannelsOut = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertChannelMapping(list []interface{}) *mediaconvert.ChannelMapping {
+	result := &mediaconvert.ChannelMapping{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["output_channel"]; ok {
+		result.OutputChannels = expandMediaConvertOutputChannelMapping(v.([]interface{}))
+	}
+	return result
+}
+
+func expandMediaConvertOutputChannelMapping(list []interface{}) []*mediaconvert.OutputChannelMapping {
+	results := []*mediaconvert.OutputChannelMapping{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	for i := 0; i < len(list); i++ {
+		result := &mediaconvert.OutputChannelMapping{}
+		tfMap := list[i].(map[string]interface{})
+		if v, ok := tfMap["input_channels"].(*schema.Set); ok && v.Len() > 0 {
+			result.InputChannels = expandInt64Set(v)
+		}
+		// if v, ok := tfMap["input_channels_fine_tune"].(*schema.Set); ok && v.Len() > 0 {
+		// 	result.InputChannelsFineTune = expandFloat64Set(v)
+		// }
+		results = append(results, result)
+	}
+	return results
+}
+
+func expandMediaConvertAudioSelectorGroups(list []interface{}) map[string]*mediaconvert.AudioSelectorGroup {
+	results := map[string]*mediaconvert.AudioSelectorGroup{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	for i := 0; i < len(list); i++ {
+		tmp := &mediaconvert.AudioSelectorGroup{}
+		tfMap := list[i].(map[string]interface{})
+		currentName := ""
+		if v, ok := tfMap["name"].(string); ok && v != "" {
+			currentName = v
+		}
+		if v, ok := tfMap["audio_selector_names"].(*schema.Set); ok && v.Len() > 0 {
+			tmp.AudioSelectorNames = expandStringSet(v)
+		}
+		if len(currentName) > 0 {
+			results[currentName] = tmp
+		}
+	}
+	return results
+}
+
+func expandMediaConvertAvailBlanking(list []interface{}) *mediaconvert.AvailBlanking {
+	result := &mediaconvert.AvailBlanking{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["avail_blanking_image"].(string); ok && v != "" {
+		result.AvailBlankingImage = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertEsamSettings(list []interface{}) *mediaconvert.EsamSettings {
+	result := &mediaconvert.EsamSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["manifest_confirm_condition_notification"]; ok {
+		result.ManifestConfirmConditionNotification = expandMediaConvertEsamManifestConfirmConditionNotification(v.([]interface{}))
+	}
+	if v, ok := tfMap["signal_processing_notification"]; ok {
+		result.SignalProcessingNotification = expandMediaConvertEsamSignalProcessingNotification(v.([]interface{}))
+	}
+	if v, ok := tfMap["response_signal_preroll"].(int); ok {
+		result.ResponseSignalPreroll = aws.Int64(int64(v))
+	}
+	return result
+}
+
+func expandMediaConvertEsamManifestConfirmConditionNotification(list []interface{}) *mediaconvert.EsamManifestConfirmConditionNotification {
+	result := &mediaconvert.EsamManifestConfirmConditionNotification{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["mcc_xml"].(string); ok && v != "" {
+		result.MccXml = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertEsamSignalProcessingNotification(list []interface{}) *mediaconvert.EsamSignalProcessingNotification {
+	result := &mediaconvert.EsamSignalProcessingNotification{}
+	if list == nil || len(list) == 0 {
+		return result
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["scc_xml"].(string); ok && v != "" {
+		result.SccXml = aws.String(v)
+	}
+	return result
+}
+
+func expandMediaConvertJobTemplateAccelerationSettings(list []interface{}) *mediaconvert.AccelerationSettings {
+	accelerationSettings := &mediaconvert.AccelerationSettings{}
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	fmt.Println(tfMap)
+	return accelerationSettings
+}
+
+func expandMediaConvertJobTemplateHopDestinations(list []interface{}) []*mediaconvert.HopDestination {
+	hopDestinations := make([]*mediaconvert.HopDestination, 0)
+	if len(list) == 0 || list[0] == nil {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	fmt.Println(tfMap)
+	return hopDestinations
+}
+
+func expandMediaConvertRectangle(list []interface{}) *mediaconvert.Rectangle {
+	result := &mediaconvert.Rectangle{}
+	if list == nil || len(list) == 0 {
+		return nil
+	}
+	tfMap := list[0].(map[string]interface{})
+	if v, ok := tfMap["height"].(int); ok {
+		result.Height = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["width"].(int); ok {
+		result.Width = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["x"].(int); ok {
+		result.X = aws.Int64(int64(v))
+	}
+	if v, ok := tfMap["y"].(int); ok {
+		result.Y = aws.Int64(int64(v))
+	}
+	return result
 }
