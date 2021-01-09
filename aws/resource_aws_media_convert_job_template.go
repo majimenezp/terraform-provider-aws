@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"log"
 
 	"encoding/json"
 
@@ -4884,6 +4885,48 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 }
 
 func resourceAwsMediaConvertJobTemplateRead(d *schema.ResourceData, meta interface{}) error {
+	conn, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
+	if err != nil {
+		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
+	}
+	ignoreTagsConfig := meta.(*AWSClient).IgnoreTagsConfig
+	getOpts := &mediaconvert.GetJobTemplateInput{
+		Name: aws.String(d.Id()),
+	}
+	resp, err := conn.GetJobTemplate(getOpts)
+	if isAWSErr(err, mediaconvert.ErrCodeNotFoundException, "") {
+		log.Printf("[WARN] Media Convert Job Template (%s) not found, removing from state", d.Id())
+		d.SetId("")
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("Error getting Media Convert Job Template: %s", err)
+	}
+	d.Set("arn", resp.JobTemplate.Arn)
+	d.Set("category", resp.JobTemplate.Category)
+	d.Set("name", resp.JobTemplate.Name)
+	d.Set("description", resp.JobTemplate.Description)
+	d.Set("priority", resp.JobTemplate.Priority)
+	d.Set("queue", resp.JobTemplate.Queue)
+
+	if err := d.Set("acceleration_settings", flattenMediaConvertAccelerationSettings(resp.JobTemplate.AccelerationSettings)); err != nil {
+		return fmt.Errorf("Error setting Media Convert Job template AccelerationSettings: %s", err)
+	}
+	if err := d.Set("hop_destinations", flattenMediaConvertHopDestinations(resp.JobTemplate.HopDestinations)); err != nil {
+		return fmt.Errorf("Error setting Media Convert Job template AccelerationSettings: %s", err)
+	}
+
+	if err := d.Set("settings", flattenMediaConvertJobTemplateSettings(resp.JobTemplate.Settings)); err != nil {
+		return fmt.Errorf("Error setting Media Convert Job template Settings: %s", err)
+	}
+
+	tags, err := keyvaluetags.MediaconvertListTags(conn, aws.StringValue(resp.JobTemplate.Arn))
+	if err != nil {
+		return fmt.Errorf("error listing tags for Media Convert Preset (%s): %s", d.Id(), err)
+	}
+	if err := d.Set("tags", tags.IgnoreAws().IgnoreConfig(ignoreTagsConfig).Map()); err != nil {
+		return fmt.Errorf("error setting tags: %s", err)
+	}
 	return nil
 }
 
@@ -4907,15 +4950,12 @@ func resourceAwsMediaConvertJobTemplateCreate(d *schema.ResourceData, meta inter
 		StatusUpdateInterval: aws.String(d.Get("status_update_interval").(string)),
 		Tags:                 keyvaluetags.New(d.Get("tags").(map[string]interface{})).IgnoreAws().MediaconvertTags(),
 	}
-	//settings := &mediaconvert.JobTemplateSettings{}
 	if attr, ok := d.GetOk("settings"); ok {
 		input.Settings = expandMediaConvertJobTemplateSettings(attr.([]interface{}))
 	}
-	//accelerationSettings := &mediaconvert.AccelerationSettings{}
 	if attr, ok := d.GetOk("acceleration_settings"); ok {
 		input.AccelerationSettings = expandMediaConvertJobTemplateAccelerationSettings(attr.([]interface{}))
 	}
-	//hopDestinations := make([]*mediaconvert.HopDestination, 0)
 	if attr, ok := d.GetOk("hop_destinations"); ok {
 		input.HopDestinations = expandMediaConvertJobTemplateHopDestinations(attr.([]interface{}))
 	}
@@ -7571,4 +7611,133 @@ func expandMediaConvertM2tsScte35Esam(list []interface{}) *mediaconvert.M2tsScte
 		result.Scte35EsamPid = aws.Int64(int64(v))
 	}
 	return result
+}
+
+func flattenMediaConvertAccelerationSettings(cfg *mediaconvert.AccelerationSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"mode": aws.StringValue(cfg.Mode),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertHopDestinations(cfg []*mediaconvert.HopDestination) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"priority":     aws.Int64Value(cfg[i].Priority),
+			"queue":        aws.StringValue(cfg[i].Queue),
+			"wait_minutes": aws.Int64Value(cfg[i].WaitMinutes),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+//###############################################################
+//###############################################################
+//###############################################################
+//###############################################################
+
+func flattenMediaConvertJobTemplateSettings(cfg *mediaconvert.JobTemplateSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"ad_avail_offset": aws.Int64Value(cfg.AdAvailOffset),
+		"avail_blanking":  flattenMediaConvertAvailBlanking(cfg.AvailBlanking),
+		"esam":            flattenMediaConvertEsamSettings(cfg.Esam),
+		"input":           flattenMediaConvertInputTemplate(cfg.Inputs),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertInputTemplate(cfg []*mediaconvert.InputTemplate) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"audio_selector_group": flattenMediaConvertAudioSelectorGroup(cfg[i].AudioSelectorGroups),
+			// "audio_selector":       aws.StringValue(cfg[i].AudioSelectors),
+			// "caption_selector":     aws.Int64Value(cfg[i].CaptionSelectors),
+			"crop":            flattenMediaConvertRectangle(cfg[i].Crop),
+			"deblock_filter":  aws.StringValue(cfg[i].DeblockFilter),
+			"denoise_filter":  aws.StringValue(cfg[i].DenoiseFilter),
+			"filter_enable":   aws.StringValue(cfg[i].FilterEnable),
+			"filter_strength": aws.Int64Value(cfg[i].FilterStrength),
+			// "image_inserter":       aws.Int64Value(cfg[i].ImageInserter),
+			// "input_clippings":      aws.Int64Value(cfg[i].InputClippings),
+			"input_scan_type": aws.StringValue(cfg[i].InputScanType),
+			"position":        flattenMediaConvertRectangle(cfg[i].Position),
+			"program_number":  aws.Int64Value(cfg[i].ProgramNumber),
+			"psi_control":     aws.StringValue(cfg[i].PsiControl),
+			"timecode_source": aws.StringValue(cfg[i].TimecodeStart),
+			// "video_selector":       aws.Int64Value(cfg[i].VideoSelector),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertAudioSelectorGroup(cfg map[string]*mediaconvert.AudioSelectorGroup) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for k, v := range cfg {
+		m := map[string]interface{}{
+			"name":                 k,
+			"audio_selector_names": flattenStringSet(v.AudioSelectorNames),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+func flattenMediaConvertEsamSettings(cfg *mediaconvert.EsamSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"manifest_confirm_condition_notification": flattenMediaConvertEsamManifestConfirmConditionNotification(cfg.ManifestConfirmConditionNotification),
+		"signal_processing_notification":          flattenMediaConvertEsamSignalProcessingNotification(cfg.SignalProcessingNotification),
+		"response_signal_preroll":                 aws.Int64Value(cfg.ResponseSignalPreroll),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertEsamSignalProcessingNotification(cfg *mediaconvert.EsamSignalProcessingNotification) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"scc_xml": aws.StringValue(cfg.SccXml),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertEsamManifestConfirmConditionNotification(cfg *mediaconvert.EsamManifestConfirmConditionNotification) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"mcc_xml": aws.StringValue(cfg.MccXml),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertAvailBlanking(cfg *mediaconvert.AvailBlanking) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"avail_blanking_image": aws.StringValue(cfg.AvailBlankingImage),
+	}
+	return []interface{}{m}
 }

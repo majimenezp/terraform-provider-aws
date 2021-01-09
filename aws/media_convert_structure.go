@@ -1045,3 +1045,16 @@ func expandMediaConvertH265QvbrSettings(list []interface{}) *mediaconvert.H265Qv
 	}
 	return result
 }
+
+func flattenMediaConvertRectangle(cfg *mediaconvert.Rectangle) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"height": aws.Int64Value(cfg.Height),
+		"width":  aws.Int64Value(cfg.Width),
+		"x":      aws.Int64Value(cfg.X),
+		"y":      aws.Int64Value(cfg.Y),
+	}
+	return []interface{}{m}
+}
