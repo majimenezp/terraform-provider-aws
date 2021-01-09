@@ -40,7 +40,7 @@ func flattenMediaConvertReservationPlan(reservationPlan *mediaconvert.Reservatio
 func expandMediaConvertNexGuardFileMarkerSettings(list []interface{}) *mediaconvert.NexGuardFileMarkerSettings {
 	result := &mediaconvert.NexGuardFileMarkerSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["license"].(string); ok && v != "" {
@@ -61,7 +61,7 @@ func expandMediaConvertNexGuardFileMarkerSettings(list []interface{}) *mediaconv
 func expandMediaConvertDolbyVisionLevel6Metadata(list []interface{}) *mediaconvert.DolbyVisionLevel6Metadata {
 	result := &mediaconvert.DolbyVisionLevel6Metadata{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["max_cll"].(int); ok {
@@ -76,7 +76,7 @@ func expandMediaConvertDolbyVisionLevel6Metadata(list []interface{}) *mediaconve
 func expandMediaConvertNoiseReducerTemporalFilterSettings(list []interface{}) *mediaconvert.NoiseReducerTemporalFilterSettings {
 	result := &mediaconvert.NoiseReducerTemporalFilterSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["aggressive_mode"].(int); ok {
@@ -97,7 +97,7 @@ func expandMediaConvertNoiseReducerTemporalFilterSettings(list []interface{}) *m
 func expandMediaConvertNoiseReducerFilterSettings(list []interface{}) *mediaconvert.NoiseReducerFilterSettings {
 	result := &mediaconvert.NoiseReducerFilterSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["strength"].(int); ok {
@@ -109,7 +109,7 @@ func expandMediaConvertNoiseReducerFilterSettings(list []interface{}) *mediaconv
 func expandMediaConvertNoiseReducerSpatialFilterSettings(list []interface{}) *mediaconvert.NoiseReducerSpatialFilterSettings {
 	result := &mediaconvert.NoiseReducerSpatialFilterSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["post_filter_sharpen_strength"].(int); ok {
@@ -160,7 +160,7 @@ func expandMediaConvertVideoPreprocessor(list []interface{}) *mediaconvert.Video
 func expandMediaConvertNoiseReducer(list []interface{}) *mediaconvert.NoiseReducer {
 	result := &mediaconvert.NoiseReducer{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["filter"].(string); ok && v != "" {
@@ -181,7 +181,7 @@ func expandMediaConvertNoiseReducer(list []interface{}) *mediaconvert.NoiseReduc
 func expandMediaConvertPartnerWatermarking(list []interface{}) *mediaconvert.PartnerWatermarking {
 	result := &mediaconvert.PartnerWatermarking{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["nexguard_file_marker_settings"]; ok {
@@ -193,7 +193,7 @@ func expandMediaConvertPartnerWatermarking(list []interface{}) *mediaconvert.Par
 func expandMediaConvertTimecodeBurnin(list []interface{}) *mediaconvert.TimecodeBurnin {
 	result := &mediaconvert.TimecodeBurnin{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["font_size"].(int); ok {
@@ -211,7 +211,7 @@ func expandMediaConvertTimecodeBurnin(list []interface{}) *mediaconvert.Timecode
 func expandMediaConvertDolbyVision(list []interface{}) *mediaconvert.DolbyVision {
 	result := &mediaconvert.DolbyVision{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 
@@ -230,7 +230,7 @@ func expandMediaConvertDolbyVision(list []interface{}) *mediaconvert.DolbyVision
 func expandMediaConvertDeinterlacer(list []interface{}) *mediaconvert.Deinterlacer {
 	result := &mediaconvert.Deinterlacer{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["algorithm"].(string); ok && v != "" {
@@ -248,7 +248,7 @@ func expandMediaConvertDeinterlacer(list []interface{}) *mediaconvert.Deinterlac
 func expandMediaConvertColorCorrector(list []interface{}) *mediaconvert.ColorCorrector {
 	result := &mediaconvert.ColorCorrector{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["brightness"].(int); ok {
@@ -275,7 +275,7 @@ func expandMediaConvertColorCorrector(list []interface{}) *mediaconvert.ColorCor
 func expandMediaConvertVideoCodecSettings(list []interface{}) *mediaconvert.VideoCodecSettings {
 	result := &mediaconvert.VideoCodecSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["av1_settings"]; ok {
@@ -998,7 +998,7 @@ func expandMediaConvertVp9Settings(list []interface{}) *mediaconvert.Vp9Settings
 func expandMediaConvertAv1QvbrSettings(list []interface{}) *mediaconvert.Av1QvbrSettings {
 	result := &mediaconvert.Av1QvbrSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["qvbr_quality_level"].(int); ok {
@@ -1013,7 +1013,7 @@ func expandMediaConvertAv1QvbrSettings(list []interface{}) *mediaconvert.Av1Qvbr
 func expandMediaConvertH264QvbrSettings(list []interface{}) *mediaconvert.H264QvbrSettings {
 	result := &mediaconvert.H264QvbrSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["max_average_bitrate"].(int); ok && v != 0 {
@@ -1031,7 +1031,7 @@ func expandMediaConvertH264QvbrSettings(list []interface{}) *mediaconvert.H264Qv
 func expandMediaConvertH265QvbrSettings(list []interface{}) *mediaconvert.H265QvbrSettings {
 	result := &mediaconvert.H265QvbrSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["max_average_bitrate"].(int); ok && v != 0 {

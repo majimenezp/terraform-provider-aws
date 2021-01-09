@@ -85,8 +85,79 @@ func testAccMediaConvertJobTemplateConfig_Basic(rName string) string {
 						color_space = "FOLLOW"
 						rotate = "DEGREE_0"
 					}
+			}
+			output_group {
+				name = "CMAF"
+				output_group_settings {
+					type = "CMAF_GROUP_SETTINGS"
+					cmaf_group_settings {
+						client_cache = "ENABLED"
+						code_specification = "RFC_4281"
+						destination_settings {
+							s3_settings {
+								encryption {
+									encryption_type = "SERVER_SIDE_ENCRYPTION_S3"
+								}
+							}
+						}
+						fragment_length = 2
+						manifest_compression = "NONE"
+						manifest_duration_format = "INTEGER"
+						min_final_segment_length = 0.0
+						mpd_profile = "MAIN_PROFILE"
+						segment_control = "SEGMENTED_FILES"
+						segment_length = 30
+						stream_inf_resolution = "INCLUDE"
+						write_dash_manifest = "ENABLED"
+						write_hls_manifest = "ENABLED"
+						write_segment_timeline_in_representation = "ENABLED"
+					}
 				}
+				output {
+					name_modifier = "240p"
+					preset = "240p"
+				}
+				output {
+					preset = "Audio"
+				}
+				output {
+					name_modifier = "360p"
+					preset = "360p"
+				}
+				output {
+					name_modifier = "432p"
+					preset = "432p"
+				}
+				output {
+					name_modifier = "480p"
+					preset = "480p"
+				}
+				output {
+					name_modifier = "576p"
+					preset = "576p"
+				}
+				output {
+					name_modifier = "720p"
+					preset = "720p"
+				}
+				output {
+					name_modifier = "1080p"
+					preset = "1080p"
+				}
+				output {
+					caption_description {
+						caption_selector_name = "Captions Selector 1"
+						destination_settings {
+							destination_type = "WEBVTT"
+						}
+					}
+					container_settings {
+						container = "CMFC"
+					}
+				}
+			}
 		}
+		status_update_interval = "SECONDS_60"
 	}
 	`, rName)
 }

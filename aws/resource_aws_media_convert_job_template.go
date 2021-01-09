@@ -3,6 +3,8 @@ package aws
 import (
 	"fmt"
 
+	"encoding/json"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/mediaconvert"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -859,9 +861,9 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 								},
 							},
 						},
-						"output_groups": {
+						"output_group": {
 							Type:     schema.TypeList,
-							Optional: true,
+							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"automated_encoding_settings": {
@@ -1806,7 +1808,7 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 											},
 										},
 									},
-									"outputs": {
+									"output": {
 										Type:     schema.TypeList,
 										Optional: true,
 										Elem: &schema.Resource{
@@ -2471,7 +2473,7 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 																				Schema: map[string]*schema.Schema{
 																					"alignment": {
 																						Type:         schema.TypeString,
-																						Optional:     true,
+																						Required:     true,
 																						ValidateFunc: validation.StringInSlice(mediaconvert.BurninSubtitleAlignment_Values(), false),
 																					},
 																					"background_color": {
@@ -4898,33 +4900,40 @@ func resourceAwsMediaConvertJobTemplateCreate(d *schema.ResourceData, meta inter
 	if err != nil {
 		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
 	}
-	settings := &mediaconvert.JobTemplateSettings{}
-	if attr, ok := d.GetOk("settings"); ok {
-		settings = expandMediaConvertJobTemplateSettings(attr.([]interface{}))
-	}
-
-	accelerationSettings := &mediaconvert.AccelerationSettings{}
-	if attr, ok := d.GetOk("acceleration_settings"); ok {
-		accelerationSettings = expandMediaConvertJobTemplateAccelerationSettings(attr.([]interface{}))
-	}
-	hopDestinations := make([]*mediaconvert.HopDestination, 0)
-	if attr, ok := d.GetOk("hop_destinations"); ok {
-		hopDestinations = expandMediaConvertJobTemplateHopDestinations(attr.([]interface{}))
-	}
 	input := &mediaconvert.CreateJobTemplateInput{
-		AccelerationSettings: accelerationSettings,
-		Category:             aws.String(d.Get("category").(string)),
-		Description:          aws.String(d.Get("description").(string)),
-		HopDestinations:      hopDestinations,
 		Name:                 aws.String(d.Get("name").(string)),
+		Description:          aws.String(d.Get("description").(string)),
 		Priority:             aws.Int64(int64(d.Get("priority").(int))),
-		Queue:                aws.String(d.Get("queue").(string)),
-		Settings:             settings,
 		StatusUpdateInterval: aws.String(d.Get("status_update_interval").(string)),
 		Tags:                 keyvaluetags.New(d.Get("tags").(map[string]interface{})).IgnoreAws().MediaconvertTags(),
 	}
+	//settings := &mediaconvert.JobTemplateSettings{}
+	if attr, ok := d.GetOk("settings"); ok {
+		input.Settings = expandMediaConvertJobTemplateSettings(attr.([]interface{}))
+	}
+	//accelerationSettings := &mediaconvert.AccelerationSettings{}
+	if attr, ok := d.GetOk("acceleration_settings"); ok {
+		input.AccelerationSettings = expandMediaConvertJobTemplateAccelerationSettings(attr.([]interface{}))
+	}
+	//hopDestinations := make([]*mediaconvert.HopDestination, 0)
+	if attr, ok := d.GetOk("hop_destinations"); ok {
+		input.HopDestinations = expandMediaConvertJobTemplateHopDestinations(attr.([]interface{}))
+	}
+	if v, ok := d.GetOk("category"); ok && v.(string) != "" {
+		input.Category = aws.String(v.(string))
+	}
+	if v, ok := d.GetOk("queue"); ok && v.(string) != "" {
+		input.Queue = aws.String(v.(string))
+	}
+
 	resp, err := conn.CreateJobTemplate(input)
 	if err != nil {
+		fmt.Println("+++++++++++++++++++++++++++++++++++++++++")
+		strA, _ := json.Marshal(resp)
+		fmt.Println(string(strA))
+		strB, _ := json.Marshal(input)
+		fmt.Println(string(strB))
+		fmt.Println("+++++++++++++++++++++++++++++++++++++++++")
 		return fmt.Errorf("Error creating Media Convert Job Template: %s", err)
 	}
 	d.SetId(aws.StringValue(resp.JobTemplate.Name))
@@ -4960,7 +4969,7 @@ func expandMediaConvertJobTemplateSettings(list []interface{}) *mediaconvert.Job
 	if v, ok := tfMap["nielsen_non_linear_watermark"]; ok {
 		result.NielsenNonLinearWatermark = expandMediaConvertNielsenNonLinearWatermarkSettings(v.([]interface{}))
 	}
-	if v, ok := tfMap["output_groups"]; ok {
+	if v, ok := tfMap["output_group"]; ok {
 		result.OutputGroups = expandMediaConvertOutputGroup(v.([]interface{}))
 	}
 	if v, ok := tfMap["timecode_config"]; ok {
@@ -5045,7 +5054,7 @@ func expandMediaConvertOutputGroup(list []interface{}) []*mediaconvert.OutputGro
 		if v, ok := tfMap["output_group_settings"]; ok {
 			result.OutputGroupSettings = expandMediaConvertMotionOutputGroupSettings(v.([]interface{}))
 		}
-		if v, ok := tfMap["outputs"]; ok {
+		if v, ok := tfMap["output"]; ok {
 			result.Outputs = expandMediaConvertOutput(v.([]interface{}))
 		}
 		results = append(results, result)
@@ -6507,7 +6516,7 @@ func expandMediaConvertEsamSettings(list []interface{}) *mediaconvert.EsamSettin
 func expandMediaConvertEsamManifestConfirmConditionNotification(list []interface{}) *mediaconvert.EsamManifestConfirmConditionNotification {
 	result := &mediaconvert.EsamManifestConfirmConditionNotification{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["mcc_xml"].(string); ok && v != "" {
@@ -6519,7 +6528,7 @@ func expandMediaConvertEsamManifestConfirmConditionNotification(list []interface
 func expandMediaConvertEsamSignalProcessingNotification(list []interface{}) *mediaconvert.EsamSignalProcessingNotification {
 	result := &mediaconvert.EsamSignalProcessingNotification{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["scc_xml"].(string); ok && v != "" {
@@ -6586,7 +6595,7 @@ func expandMediaConvertRectangle(list []interface{}) *mediaconvert.Rectangle {
 func expandMediaConvertDvbSubDestinationSettings(list []interface{}) *mediaconvert.DvbSubDestinationSettings {
 	result := &mediaconvert.DvbSubDestinationSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["alignment"].(string); ok && v != "" {
@@ -6649,7 +6658,7 @@ func expandMediaConvertDvbSubDestinationSettings(list []interface{}) *mediaconve
 func expandMediaConvertEmbeddedDestinationSettings(list []interface{}) *mediaconvert.EmbeddedDestinationSettings {
 	result := &mediaconvert.EmbeddedDestinationSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["destination_608_channel_number"].(int); ok {
@@ -6664,7 +6673,7 @@ func expandMediaConvertEmbeddedDestinationSettings(list []interface{}) *mediacon
 func expandMediaConvertImscDestinationSettings(list []interface{}) *mediaconvert.ImscDestinationSettings {
 	result := &mediaconvert.ImscDestinationSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["style_passthrough"].(string); ok && v != "" {
@@ -6676,7 +6685,7 @@ func expandMediaConvertImscDestinationSettings(list []interface{}) *mediaconvert
 func expandMediaConvertSccDestinationSettings(list []interface{}) *mediaconvert.SccDestinationSettings {
 	result := &mediaconvert.SccDestinationSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["framerate"].(string); ok && v != "" {
@@ -6688,7 +6697,7 @@ func expandMediaConvertSccDestinationSettings(list []interface{}) *mediaconvert.
 func expandMediaConvertTeletextDestinationSettings(list []interface{}) *mediaconvert.TeletextDestinationSettings {
 	result := &mediaconvert.TeletextDestinationSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["page_number"].(string); ok && v != "" {
@@ -6713,7 +6722,7 @@ func expandMediaConvertTtmlDestinationSettings(list []interface{}) *mediaconvert
 func expandMediaConvertBurninDestinationSettings(list []interface{}) *mediaconvert.BurninDestinationSettings {
 	result := &mediaconvert.BurninDestinationSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["alignment"].(string); ok && v != "" {
@@ -6812,7 +6821,7 @@ func expandMediaConvertAudioNormalizationSettings(list []interface{}) *mediaconv
 func expandMediaConvertCodecSettings(list []interface{}) *mediaconvert.AudioCodecSettings {
 	result := &mediaconvert.AudioCodecSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["codec"].(string); ok && v != "" {
@@ -7166,7 +7175,7 @@ func expandMediaConvertWavSettings(list []interface{}) *mediaconvert.WavSettings
 func expandMediaConvertContainerSettings(list []interface{}) *mediaconvert.ContainerSettings {
 	result := &mediaconvert.ContainerSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	containerSettingsMap := list[0].(map[string]interface{})
 	if v, ok := containerSettingsMap["cmfc_settings"]; ok {
@@ -7503,7 +7512,7 @@ func expandMediaConvertCmfcSettings(list []interface{}) *mediaconvert.CmfcSettin
 func expandMediaConvertDvbNitSettings(list []interface{}) *mediaconvert.DvbNitSettings {
 	result := &mediaconvert.DvbNitSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["network_id"].(int); ok {
@@ -7521,7 +7530,7 @@ func expandMediaConvertDvbNitSettings(list []interface{}) *mediaconvert.DvbNitSe
 func expandMediaConvertDvbSdtSettings(list []interface{}) *mediaconvert.DvbSdtSettings {
 	result := &mediaconvert.DvbSdtSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["output_sdt"].(string); ok && v != "" {
@@ -7543,7 +7552,7 @@ func expandMediaConvertDvbSdtSettings(list []interface{}) *mediaconvert.DvbSdtSe
 func expandMediaConvertDvbTdtSettings(list []interface{}) *mediaconvert.DvbTdtSettings {
 	result := &mediaconvert.DvbTdtSettings{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["tdt_interval"].(int); ok {
@@ -7555,7 +7564,7 @@ func expandMediaConvertDvbTdtSettings(list []interface{}) *mediaconvert.DvbTdtSe
 func expandMediaConvertM2tsScte35Esam(list []interface{}) *mediaconvert.M2tsScte35Esam {
 	result := &mediaconvert.M2tsScte35Esam{}
 	if list == nil || len(list) == 0 {
-		return result
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["scte_35_esam_pid"].(int); ok {
