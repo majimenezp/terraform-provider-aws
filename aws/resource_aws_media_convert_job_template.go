@@ -4908,6 +4908,7 @@ func resourceAwsMediaConvertJobTemplateRead(d *schema.ResourceData, meta interfa
 	d.Set("description", resp.JobTemplate.Description)
 	d.Set("priority", resp.JobTemplate.Priority)
 	d.Set("queue", resp.JobTemplate.Queue)
+	d.Set("status_update_interval", resp.JobTemplate.StatusUpdateInterval)
 
 	if err := d.Set("acceleration_settings", flattenMediaConvertAccelerationSettings(resp.JobTemplate.AccelerationSettings)); err != nil {
 		return fmt.Errorf("Error setting Media Convert Job template AccelerationSettings: %s", err)
@@ -4931,6 +4932,11 @@ func resourceAwsMediaConvertJobTemplateRead(d *schema.ResourceData, meta interfa
 }
 
 func resourceAwsMediaConvertJobTemplateUpdate(d *schema.ResourceData, meta interface{}) error {
+	conn, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
+	if err != nil {
+		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
+	}
+	log.Printf("[INFO] Updating MediaConvert Job Template: %s", d.Get("name").(string))
 	return resourceAwsMediaConvertJobTemplateRead(d, meta)
 }
 
@@ -5016,7 +5022,7 @@ func expandMediaConvertJobTemplateSettings(list []interface{}) *mediaconvert.Job
 		result.TimecodeConfig = expandMediaConvertTimecodeConfig(v.([]interface{}))
 	}
 	if v, ok := tfMap["timed_metadata_insertion"]; ok {
-		result.TimecodeConfig = expandMediaConvertTimecodeConfig(v.([]interface{}))
+		result.TimedMetadataInsertion = expandMediaConvertTimedMetadataInsertion(v.([]interface{}))
 	}
 	fmt.Println(tfMap)
 	return result
@@ -5964,7 +5970,7 @@ func expandMediaConvertMotionImageInserter(list []interface{}) *mediaconvert.Mot
 	if v, ok := tfMap["insertion_mode"].(string); ok && v != "" {
 		result.InsertionMode = aws.String(v)
 	}
-	if v, ok := tfMap["insertion_mode"]; ok {
+	if v, ok := tfMap["offset"]; ok {
 		result.Offset = expandMediaConvertMotionImageInsertionOffset(v.([]interface{}))
 	}
 	if v, ok := tfMap["playback"].(string); ok && v != "" {
@@ -7649,12 +7655,56 @@ func flattenMediaConvertJobTemplateSettings(cfg *mediaconvert.JobTemplateSetting
 		return []interface{}{}
 	}
 	m := map[string]interface{}{
-		"ad_avail_offset": aws.Int64Value(cfg.AdAvailOffset),
-		"avail_blanking":  flattenMediaConvertAvailBlanking(cfg.AvailBlanking),
-		"esam":            flattenMediaConvertEsamSettings(cfg.Esam),
-		"input":           flattenMediaConvertInputTemplate(cfg.Inputs),
+		"ad_avail_offset":              aws.Int64Value(cfg.AdAvailOffset),
+		"avail_blanking":               flattenMediaConvertAvailBlanking(cfg.AvailBlanking),
+		"esam":                         flattenMediaConvertEsamSettings(cfg.Esam),
+		"input":                        flattenMediaConvertInputTemplate(cfg.Inputs),
+		"motion_image_inserter":        flattenMediaConvertMotionImageInserter(cfg.MotionImageInserter),
+		"nielsen_configuration":        flattenMediaConvertNielsenConfiguration(cfg.NielsenConfiguration),
+		"nielsen_non_linear_watermark": flattenMediaConvertNielsenNonLinearWatermarkSettings(cfg.NielsenNonLinearWatermark),
+		"output_group":                 flattenMediaConvertOutputGroup(cfg.OutputGroups),
+		"timecode_config":              flattenMediaConvertTimecodeConfig(cfg.TimecodeConfig),
+		"timed_metadata_insertion":     flattenMediaConvertTimedMetadataInsertion(cfg.TimedMetadataInsertion),
 	}
 	return []interface{}{m}
+}
+
+func flattenMediaConvertTimecodeConfig(cfg *mediaconvert.TimecodeConfig) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"anchor":           aws.StringValue(cfg.Anchor),
+		"source":           aws.StringValue(cfg.Source),
+		"start":            aws.StringValue(cfg.Start),
+		"timestamp_offset": aws.StringValue(cfg.TimestampOffset),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertTimedMetadataInsertion(cfg *mediaconvert.TimedMetadataInsertion) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"id3_insertion": flattenMediaConvertId3Insertion(cfg.Id3Insertions),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertId3Insertion(cfg []*mediaconvert.Id3Insertion) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"id3":      aws.StringValue(cfg[i].Id3),
+			"timecode": aws.StringValue(cfg[i].Timecode),
+		}
+		results = append(results, m)
+	}
+	return results
 }
 
 func flattenMediaConvertInputTemplate(cfg []*mediaconvert.InputTemplate) []interface{} {
@@ -7665,21 +7715,22 @@ func flattenMediaConvertInputTemplate(cfg []*mediaconvert.InputTemplate) []inter
 	for i := 0; i < len(cfg); i++ {
 		m := map[string]interface{}{
 			"audio_selector_group": flattenMediaConvertAudioSelectorGroup(cfg[i].AudioSelectorGroups),
-			// "audio_selector":       aws.StringValue(cfg[i].AudioSelectors),
-			// "caption_selector":     aws.Int64Value(cfg[i].CaptionSelectors),
-			"crop":            flattenMediaConvertRectangle(cfg[i].Crop),
-			"deblock_filter":  aws.StringValue(cfg[i].DeblockFilter),
-			"denoise_filter":  aws.StringValue(cfg[i].DenoiseFilter),
-			"filter_enable":   aws.StringValue(cfg[i].FilterEnable),
-			"filter_strength": aws.Int64Value(cfg[i].FilterStrength),
-			// "image_inserter":       aws.Int64Value(cfg[i].ImageInserter),
-			// "input_clippings":      aws.Int64Value(cfg[i].InputClippings),
-			"input_scan_type": aws.StringValue(cfg[i].InputScanType),
-			"position":        flattenMediaConvertRectangle(cfg[i].Position),
-			"program_number":  aws.Int64Value(cfg[i].ProgramNumber),
-			"psi_control":     aws.StringValue(cfg[i].PsiControl),
-			"timecode_source": aws.StringValue(cfg[i].TimecodeStart),
-			// "video_selector":       aws.Int64Value(cfg[i].VideoSelector),
+			"audio_selector":       flattenMediaConvertAudioSelector(cfg[i].AudioSelectors),
+			"caption_selector":     flattenMediaConvertCaptionSelector(cfg[i].CaptionSelectors),
+			"crop":                 flattenMediaConvertRectangle(cfg[i].Crop),
+			"deblock_filter":       aws.StringValue(cfg[i].DeblockFilter),
+			"denoise_filter":       aws.StringValue(cfg[i].DenoiseFilter),
+			"filter_enable":        aws.StringValue(cfg[i].FilterEnable),
+			"filter_strength":      aws.Int64Value(cfg[i].FilterStrength),
+			"image_inserter":       flattenMediaConvertImageInserter(cfg[i].ImageInserter),
+			"input_clippings":      flattenMediaConvertInputClipping(cfg[i].InputClippings),
+			"input_scan_type":      aws.StringValue(cfg[i].InputScanType),
+			"position":             flattenMediaConvertRectangle(cfg[i].Position),
+			"program_number":       aws.Int64Value(cfg[i].ProgramNumber),
+			"psi_control":          aws.StringValue(cfg[i].PsiControl),
+			"timecode_source":      aws.StringValue(cfg[i].TimecodeSource),
+			"timecode_start":       aws.StringValue(cfg[i].TimecodeStart),
+			"video_selector":       flattenMediaConvertVideoSelector(cfg[i].VideoSelector),
 		}
 		results = append(results, m)
 	}
@@ -7700,6 +7751,7 @@ func flattenMediaConvertAudioSelectorGroup(cfg map[string]*mediaconvert.AudioSel
 	}
 	return results
 }
+
 func flattenMediaConvertEsamSettings(cfg *mediaconvert.EsamSettings) []interface{} {
 	if cfg == nil {
 		return []interface{}{}
@@ -7741,3 +7793,762 @@ func flattenMediaConvertAvailBlanking(cfg *mediaconvert.AvailBlanking) []interfa
 	}
 	return []interface{}{m}
 }
+
+func flattenMediaConvertAudioSelector(cfg map[string]*mediaconvert.AudioSelector) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for k, v := range cfg {
+		m := map[string]interface{}{
+			"name":                      k,
+			"custom_language_code":      aws.StringValue(v.CustomLanguageCode),
+			"default_selection":         aws.StringValue(v.DefaultSelection),
+			"external_audio_file_input": aws.StringValue(v.ExternalAudioFileInput),
+			"language_code":             aws.StringValue(v.LanguageCode),
+			"offset":                    aws.Int64Value(v.Offset),
+			"pids":                      flattenInt64Set(v.Pids),
+			"program_selection":         aws.Int64Value(v.ProgramSelection),
+			"remix_settings":            flattenMediaConvertRemixSettings(v.RemixSettings),
+			"selector_type":             aws.StringValue(v.SelectorType),
+			"tracks":                    flattenInt64Set(v.Tracks),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertCaptionSelector(cfg map[string]*mediaconvert.CaptionSelector) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for k, v := range cfg {
+		m := map[string]interface{}{
+			"name":                 k,
+			"custom_language_code": aws.StringValue(v.CustomLanguageCode),
+			"language_code":        aws.StringValue(v.LanguageCode),
+			"source_settings":      flattenMediaConvertCaptionSourceSettings(v.SourceSettings),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertCaptionSourceSettings(cfg *mediaconvert.CaptionSourceSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"ancillary_source_settings": flattenMediaConvertAncillarySourceSettings(cfg.AncillarySourceSettings),
+		"dvb_sub_source_settings":   flattenMediaConvertDvbSubSourceSettings(cfg.DvbSubSourceSettings),
+		"embedded_source_settings":  flattenMediaConvertEmbeddedSourceSettings(cfg.EmbeddedSourceSettings),
+		"file_source_settings":      flattenMediaConvertFileSourceSettings(cfg.FileSourceSettings),
+		"source_type":               aws.StringValue(cfg.SourceType),
+		"teletext_source_settings":  flattenMediaConvertTeletextSourceSettings(cfg.TeletextSourceSettings),
+		"track_source_settings":     flattenMediaConvertTrackSourceSettings(cfg.TrackSourceSettings),
+	}
+	return []interface{}{m}
+}
+func flattenMediaConvertAncillarySourceSettings(cfg *mediaconvert.AncillarySourceSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"convert_608_to_708":              aws.StringValue(cfg.Convert608To708),
+		"source_ancillary_channel_number": aws.Int64Value(cfg.SourceAncillaryChannelNumber),
+		"terminate_captions":              aws.StringValue(cfg.TerminateCaptions),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertDvbSubSourceSettings(cfg *mediaconvert.DvbSubSourceSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"pid": aws.Int64Value(cfg.Pid),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertEmbeddedSourceSettings(cfg *mediaconvert.EmbeddedSourceSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"convert_608_to_708":        aws.StringValue(cfg.Convert608To708),
+		"source_608_channel_number": aws.Int64Value(cfg.Source608ChannelNumber),
+		"source_608_track_number":   aws.Int64Value(cfg.Source608TrackNumber),
+		"terminate_captions":        aws.StringValue(cfg.TerminateCaptions),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertCaptionSourceFramerate(cfg *mediaconvert.CaptionSourceFramerate) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"framerate_denominator": aws.Int64Value(cfg.FramerateDenominator),
+		"framerate_numerator":   aws.Int64Value(cfg.FramerateNumerator),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertFileSourceSettings(cfg *mediaconvert.FileSourceSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"convert_608_to_708": aws.StringValue(cfg.Convert608To708),
+		"framerate":          flattenMediaConvertCaptionSourceFramerate(cfg.Framerate),
+		"source_file":        aws.StringValue(cfg.SourceFile),
+		"time_delta":         aws.Int64Value(cfg.TimeDelta),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertTeletextSourceSettings(cfg *mediaconvert.TeletextSourceSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"page_number": aws.StringValue(cfg.PageNumber),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertTrackSourceSettings(cfg *mediaconvert.TrackSourceSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"track_number": aws.Int64Value(cfg.TrackNumber),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertImageInserter(cfg *mediaconvert.ImageInserter) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"insertable_images": flattenMediaConvertInsertableImage(cfg.InsertableImages),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertInsertableImage(cfg []*mediaconvert.InsertableImage) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"duration":             aws.Int64Value(cfg[i].Duration),
+			"fade_in":              aws.Int64Value(cfg[i].FadeIn),
+			"fade_out":             aws.Int64Value(cfg[i].FadeOut),
+			"height":               aws.Int64Value(cfg[i].Height),
+			"image_inserter_input": aws.StringValue(cfg[i].ImageInserterInput),
+			"image_x":              aws.Int64Value(cfg[i].ImageX),
+			"image_y":              aws.Int64Value(cfg[i].ImageY),
+			"layer":                aws.Int64Value(cfg[i].Layer),
+			"opacity":              aws.Int64Value(cfg[i].Opacity),
+			"start_time":           aws.StringValue(cfg[i].StartTime),
+			"width":                aws.Int64Value(cfg[i].Width),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertInputClipping(cfg []*mediaconvert.InputClipping) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"end_timecode":   aws.StringValue(cfg[i].EndTimecode),
+			"start_timecode": aws.StringValue(cfg[i].StartTimecode),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertVideoSelector(cfg *mediaconvert.VideoSelector) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"alpha_behavior":    aws.StringValue(cfg.AlphaBehavior),
+		"color_space":       aws.StringValue(cfg.ColorSpace),
+		"color_space_usage": aws.StringValue(cfg.ColorSpaceUsage),
+		"pid":               aws.Int64Value(cfg.Pid),
+		"program_number":    aws.Int64Value(cfg.ProgramNumber),
+		"rotate":            aws.StringValue(cfg.Rotate),
+		"hdr10_metadata":    flattenMediaConvertHdr10Metadata(cfg.Hdr10Metadata),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertHdr10Metadata(cfg *mediaconvert.Hdr10Metadata) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"blue_primary_x":                aws.Int64Value(cfg.BluePrimaryX),
+		"blue_primary_y":                aws.Int64Value(cfg.BluePrimaryY),
+		"green_primary_x":               aws.Int64Value(cfg.GreenPrimaryX),
+		"green_primary_y":               aws.Int64Value(cfg.GreenPrimaryY),
+		"max_content_light_level":       aws.Int64Value(cfg.MaxContentLightLevel),
+		"max_frame_average_light_level": aws.Int64Value(cfg.MaxFrameAverageLightLevel),
+		"max_luminance":                 aws.Int64Value(cfg.MaxLuminance),
+		"min_luminance":                 aws.Int64Value(cfg.MinLuminance),
+		"red_primary_x":                 aws.Int64Value(cfg.RedPrimaryX),
+		"red_primary_y":                 aws.Int64Value(cfg.RedPrimaryY),
+		"white_point_x":                 aws.Int64Value(cfg.WhitePointX),
+		"white_point_y":                 aws.Int64Value(cfg.WhitePointY),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertMotionImageInserter(cfg *mediaconvert.MotionImageInserter) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"framerate":      flattenMediaConvertMotionImageInsertionFramerate(cfg.Framerate),
+		"input":          aws.StringValue(cfg.Input),
+		"insertion_mode": aws.StringValue(cfg.InsertionMode),
+		"offset":         flattenMediaConvertMotionImageInsertionOffset(cfg.Offset),
+		"playback":       aws.StringValue(cfg.Playback),
+		"start_time":     aws.StringValue(cfg.StartTime),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertMotionImageInsertionFramerate(cfg *mediaconvert.MotionImageInsertionFramerate) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"framerate_denominator": aws.Int64Value(cfg.FramerateDenominator),
+		"framerate_numerator":   aws.Int64Value(cfg.FramerateNumerator),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertMotionImageInsertionOffset(cfg *mediaconvert.MotionImageInsertionOffset) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"image_x": aws.Int64Value(cfg.ImageX),
+		"image_y": aws.Int64Value(cfg.ImageY),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertNielsenConfiguration(cfg *mediaconvert.NielsenConfiguration) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"breakout_code":  aws.Int64Value(cfg.BreakoutCode),
+		"distributor_id": aws.StringValue(cfg.DistributorId),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertNielsenNonLinearWatermarkSettings(cfg *mediaconvert.NielsenNonLinearWatermarkSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"active_watermark_process":   aws.StringValue(cfg.ActiveWatermarkProcess),
+		"adi_filename":               aws.StringValue(cfg.AdiFilename),
+		"asset_id":                   aws.StringValue(cfg.AssetId),
+		"asset_name":                 aws.StringValue(cfg.AssetName),
+		"cbet_source_id":             aws.StringValue(cfg.CbetSourceId),
+		"episode_id":                 aws.StringValue(cfg.EpisodeId),
+		"metadata_destination":       aws.StringValue(cfg.MetadataDestination),
+		"source_id":                  aws.Int64Value(cfg.SourceId),
+		"source_watermark_status":    aws.StringValue(cfg.SourceWatermarkStatus),
+		"tic_server_url":             aws.StringValue(cfg.TicServerUrl),
+		"unique_tic_per_audio_track": aws.StringValue(cfg.UniqueTicPerAudioTrack),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertOutputGroup(cfg []*mediaconvert.OutputGroup) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"automated_encoding_settings": flattenMediaConvertAutomatedEncodingSettings(cfg[i].AutomatedEncodingSettings),
+			"custom_name":                 aws.StringValue(cfg[i].CustomName),
+			"name":                        aws.StringValue(cfg[i].Name),
+			"output_group_settings":       flattenMediaConvertOutputGroupSettings(cfg[i].OutputGroupSettings),
+			"output":                      flattenMediaConvertOutput(cfg[i].Outputs),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertAutomatedEncodingSettings(cfg *mediaconvert.AutomatedEncodingSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"abr_settings": flattenMediaConvertAutomatedAbrSettings(cfg.AbrSettings),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertAutomatedAbrSettings(cfg *mediaconvert.AutomatedAbrSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"max_abr_bitrate": aws.Int64Value(cfg.MaxAbrBitrate),
+		"max_renditions":  aws.Int64Value(cfg.MaxRenditions),
+		"min_abr_bitrate": aws.Int64Value(cfg.MinAbrBitrate),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertOutputGroupSettings(cfg *mediaconvert.OutputGroupSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"cmaf_group_settings":      flattenMediaConvertCmafGroupSettings(cfg.CmafGroupSettings),
+		"dash_iso_group_settings":  flattenMediaConvertDashIsoGroupSettings(cfg.DashIsoGroupSettings),
+		"file_group_settings":      flattenMediaConvertFileGroupSettings(cfg.FileGroupSettings),
+		"hls_group_settings":       flattenMediaConvertHlsGroupSettings(cfg.HlsGroupSettings),
+		"ms_smooth_group_settings": flattenMediaConvertMsSmoothGroupSettings(cfg.MsSmoothGroupSettings),
+		"type":                     aws.StringValue(cfg.Type),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertMsSmoothGroupSettings(cfg *mediaconvert.MsSmoothGroupSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"additional_manifest":  flattenMediaConvertMsSmoothAdditionalManifest(cfg.AdditionalManifests),
+		"audio_deduplication":  aws.StringValue(cfg.AudioDeduplication),
+		"destination":          aws.StringValue(cfg.Destination),
+		"destination_settings": flattenMediaConvertDestinationSettings(cfg.DestinationSettings),
+		"encryption":           flattenMediaConvertMsSmoothEncryptionSettings(cfg.Encryption),
+		"fragment_length":      aws.Int64Value(cfg.FragmentLength),
+		"manifest_encoding":    aws.StringValue(cfg.ManifestEncoding),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertMsSmoothEncryptionSettings(cfg *mediaconvert.MsSmoothEncryptionSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"speke_key_provider": flattenMediaConvertSpekeKeyProvider(cfg.SpekeKeyProvider),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertMsSmoothAdditionalManifest(cfg []*mediaconvert.MsSmoothAdditionalManifest) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"manifest_name_modifier": aws.StringValue(cfg[i].ManifestNameModifier),
+			"selected_outputs":       flattenStringSet(cfg[i].SelectedOutputs),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertHlsGroupSettings(cfg *mediaconvert.HlsGroupSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"ad_markers":                   flattenStringSet(cfg.AdMarkers),
+		"additional_manifest":          flattenMediaConvertHlsAdditionalManifest(cfg.AdditionalManifests),
+		"audio_only_header":            aws.StringValue(cfg.AudioOnlyHeader),
+		"base_url":                     aws.StringValue(cfg.BaseUrl),
+		"caption_language_mapping":     flattenMediaConvertHlsCaptionLanguageMapping(cfg.CaptionLanguageMappings),
+		"client_cache":                 aws.StringValue(cfg.ClientCache),
+		"codec_specification":          aws.StringValue(cfg.CodecSpecification),
+		"destination":                  aws.StringValue(cfg.Destination),
+		"destination_settings":         flattenMediaConvertDestinationSettings(cfg.DestinationSettings),
+		"directory_structure":          aws.StringValue(cfg.DirectoryStructure),
+		"encryption":                   flattenMediaConvertHlsEncryptionSettings(cfg.Encryption),
+		"manifest_compression":         aws.StringValue(cfg.ManifestCompression),
+		"manifest_duration_format":     aws.StringValue(cfg.ManifestDurationFormat),
+		"min_final_segment_length":     aws.Float64Value(cfg.MinFinalSegmentLength),
+		"min_segment_length":           aws.Int64Value(cfg.MinSegmentLength),
+		"output_selection":             aws.StringValue(cfg.OutputSelection),
+		"program_date_time":            aws.StringValue(cfg.ProgramDateTime),
+		"program_date_time_period":     aws.Int64Value(cfg.ProgramDateTimePeriod),
+		"segment_control":              aws.StringValue(cfg.SegmentControl),
+		"segment_length":               aws.Int64Value(cfg.SegmentLength),
+		"segments_per_subdirectory":    aws.Int64Value(cfg.SegmentsPerSubdirectory),
+		"stream_inf_resolution":        aws.StringValue(cfg.StreamInfResolution),
+		"timed_metadata_id3_frame":     aws.StringValue(cfg.TimedMetadataId3Frame),
+		"timed_metadata_id3_period":    aws.Int64Value(cfg.TimedMetadataId3Period),
+		"timestamp_delta_milliseconds": aws.Int64Value(cfg.TimestampDeltaMilliseconds),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertHlsEncryptionSettings(cfg *mediaconvert.HlsEncryptionSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"constant_initialization_vector":    aws.StringValue(cfg.ConstantInitializationVector),
+		"encryption_method":                 aws.StringValue(cfg.EncryptionMethod),
+		"initialization_vector_in_manifest": aws.StringValue(cfg.InitializationVectorInManifest),
+		"offline_encrypted":                 aws.StringValue(cfg.OfflineEncrypted),
+		"speke_key_provider":                flattenMediaConvertSpekeKeyProvider(cfg.SpekeKeyProvider),
+		"static_key_provider":               flattenMediaConvertStaticKeyProvider(cfg.StaticKeyProvider),
+		"type":                              aws.StringValue(cfg.Type),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertHlsCaptionLanguageMapping(cfg []*mediaconvert.HlsCaptionLanguageMapping) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"caption_channel":      aws.Int64Value(cfg[i].CaptionChannel),
+			"custom_language_code": aws.StringValue(cfg[i].CustomLanguageCode),
+			"language_code":        aws.StringValue(cfg[i].LanguageCode),
+			"language_description": aws.StringValue(cfg[i].LanguageDescription),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertHlsAdditionalManifest(cfg []*mediaconvert.HlsAdditionalManifest) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"manifest_name_modifier": aws.StringValue(cfg[i].ManifestNameModifier),
+			"selected_outputs":       flattenStringSet(cfg[i].SelectedOutputs),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertFileGroupSettings(cfg *mediaconvert.FileGroupSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"destination":          aws.StringValue(cfg.Destination),
+		"destination_settings": flattenMediaConvertDestinationSettings(cfg.DestinationSettings),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertDashIsoGroupSettings(cfg *mediaconvert.DashIsoGroupSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"additional_manifest":      flattenMediaConvertDashAdditionalManifest(cfg.AdditionalManifests),
+		"base_url":                 aws.StringValue(cfg.BaseUrl),
+		"destination":              aws.StringValue(cfg.Destination),
+		"destination_settings":     flattenMediaConvertDestinationSettings(cfg.DestinationSettings),
+		"encryption":               flattenMediaConvertDashIsoEncryptionSettings(cfg.Encryption),
+		"fragment_length":          aws.Int64Value(cfg.FragmentLength),
+		"hbbtv_compliance":         aws.StringValue(cfg.HbbtvCompliance),
+		"min_buffer_time":          aws.Int64Value(cfg.MinBufferTime),
+		"min_final_segment_length": aws.Float64Value(cfg.MinFinalSegmentLength),
+		"mpd_profile":              aws.StringValue(cfg.MpdProfile),
+		"segment_control":          aws.StringValue(cfg.SegmentControl),
+		"segment_length":           aws.Int64Value(cfg.SegmentLength),
+		"write_segment_timeline_in_representation": aws.StringValue(cfg.WriteSegmentTimelineInRepresentation),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertDashIsoEncryptionSettings(cfg *mediaconvert.DashIsoEncryptionSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"playback_device_compatibility": aws.StringValue(cfg.PlaybackDeviceCompatibility),
+		"speke_key_provider":            flattenMediaConvertSpekeKeyProvider(cfg.SpekeKeyProvider),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertSpekeKeyProvider(cfg *mediaconvert.SpekeKeyProvider) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"certificate_arn": aws.StringValue(cfg.CertificateArn),
+		"resource_id":     aws.StringValue(cfg.ResourceId),
+		"system_ids":      flattenStringSet(cfg.SystemIds),
+		"url":             aws.StringValue(cfg.Url),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertDashAdditionalManifest(cfg []*mediaconvert.DashAdditionalManifest) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"manifest_name_modifier": aws.StringValue(cfg[i].ManifestNameModifier),
+			"selected_outputs":       flattenStringSet(cfg[i].SelectedOutputs),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertCmafGroupSettings(cfg *mediaconvert.CmafGroupSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"additional_manifest":                      flattenMediaConvertCmafAdditionalManifest(cfg.AdditionalManifests),
+		"base_url":                                 aws.StringValue(cfg.BaseUrl),
+		"client_cache":                             aws.StringValue(cfg.ClientCache),
+		"code_specification":                       aws.StringValue(cfg.CodecSpecification),
+		"destination":                              aws.StringValue(cfg.Destination),
+		"destination_settings":                     flattenMediaConvertDestinationSettings(cfg.DestinationSettings),
+		"encryption":                               flattenMediaConvertCmafEncryptionSettings(cfg.Encryption),
+		"fragment_length":                          aws.Int64Value(cfg.FragmentLength),
+		"manifest_compression":                     aws.StringValue(cfg.ManifestCompression),
+		"manifest_duration_format":                 aws.StringValue(cfg.ManifestDurationFormat),
+		"min_buffer_time":                          aws.Int64Value(cfg.MinBufferTime),
+		"min_final_segment_length":                 aws.Float64Value(cfg.MinFinalSegmentLength),
+		"mpd_profile":                              aws.StringValue(cfg.MpdProfile),
+		"segment_control":                          aws.StringValue(cfg.SegmentControl),
+		"segment_length":                           aws.Int64Value(cfg.SegmentLength),
+		"stream_inf_resolution":                    aws.StringValue(cfg.StreamInfResolution),
+		"write_dash_manifest":                      aws.StringValue(cfg.WriteDashManifest),
+		"write_hls_manifest":                       aws.StringValue(cfg.WriteHlsManifest),
+		"write_segment_timeline_in_representation": aws.StringValue(cfg.WriteSegmentTimelineInRepresentation),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertCmafEncryptionSettings(cfg *mediaconvert.CmafEncryptionSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"constant_initialization_vector":    aws.StringValue(cfg.ConstantInitializationVector),
+		"encryption_method":                 aws.StringValue(cfg.EncryptionMethod),
+		"initialization_vector_in_manifest": aws.StringValue(cfg.InitializationVectorInManifest),
+		"speke_key_provider":                flattenMediaConvertSpekeKeyProviderCmaf(cfg.SpekeKeyProvider),
+		"static_key_provider":               flattenMediaConvertStaticKeyProvider(cfg.StaticKeyProvider),
+		"type":                              aws.StringValue(cfg.Type),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertSpekeKeyProviderCmaf(cfg *mediaconvert.SpekeKeyProviderCmaf) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+
+	m := map[string]interface{}{
+		"certificate_arn":          aws.StringValue(cfg.CertificateArn),
+		"dash_signaled_system_ids": flattenStringSet(cfg.DashSignaledSystemIds),
+		"hls_signaled_system_ids":  flattenStringSet(cfg.HlsSignaledSystemIds),
+		"resource_id":              aws.StringValue(cfg.ResourceId),
+		"url":                      aws.StringValue(cfg.Url),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertStaticKeyProviders(cfg []*mediaconvert.StaticKeyProvider) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"key_format":          aws.StringValue(cfg[i].KeyFormat),
+			"key_format_versions": aws.StringValue(cfg[i].KeyFormatVersions),
+			"static_key_value":    aws.StringValue(cfg[i].StaticKeyValue),
+			"url":                 aws.StringValue(cfg[i].Url),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertStaticKeyProvider(cfg *mediaconvert.StaticKeyProvider) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"key_format":          aws.StringValue(cfg.KeyFormat),
+		"key_format_versions": aws.StringValue(cfg.KeyFormatVersions),
+		"static_key_value":    aws.StringValue(cfg.StaticKeyValue),
+		"url":                 aws.StringValue(cfg.Url),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertCmafAdditionalManifest(cfg []*mediaconvert.CmafAdditionalManifest) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"manifest_name_modifier": aws.StringValue(cfg[i].ManifestNameModifier),
+			"selected_outputs":       flattenStringSet(cfg[i].SelectedOutputs),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertDestinationSettings(cfg *mediaconvert.DestinationSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"s3_settings": flattenMediaConvertS3DestinationSettings(cfg.S3Settings),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertS3DestinationSettings(cfg *mediaconvert.S3DestinationSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"access_control": flattenMediaConvertS3DestinationAccessControl(cfg.AccessControl),
+		"encryption":     flattenMediaConvertS3EncryptionSettings(cfg.Encryption),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertS3DestinationAccessControl(cfg *mediaconvert.S3DestinationAccessControl) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"canned_acl": aws.StringValue(cfg.CannedAcl),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertS3EncryptionSettings(cfg *mediaconvert.S3EncryptionSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"encryption_type": aws.StringValue(cfg.EncryptionType),
+		"kms_key_arn":     aws.StringValue(cfg.KmsKeyArn),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertOutput(cfg []*mediaconvert.Output) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"audio_description":   flattenMediaConvertAudioDescription(cfg[i].AudioDescriptions),
+			"caption_description": flattenMediaConvertCaptionDescription(cfg[i].CaptionDescriptions),
+			"container_settings":  flattenMediaConvertContainerSettings(cfg[i].ContainerSettings),
+			"extension":           aws.StringValue(cfg[i].Extension),
+			"name_modifier":       aws.StringValue(cfg[i].NameModifier),
+			"output_settings":     flattenMediaConvertOutputSettings(cfg[i].OutputSettings),
+			"preset":              aws.StringValue(cfg[i].Preset),
+			"video_description":   flattenMediaConvertVideoDescription(cfg[i].VideoDescription),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertCaptionDescription(cfg []*mediaconvert.CaptionDescription) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	results := make([]interface{}, 0, len(cfg))
+	for i := 0; i < len(cfg); i++ {
+		m := map[string]interface{}{
+			"caption_selector_name": aws.StringValue(cfg[i].CaptionSelectorName),
+			"custom_language_code":  aws.StringValue(cfg[i].CustomLanguageCode),
+			"destination_settings":  flattenMediaConvertCaptionDestinationSettings(cfg[i].DestinationSettings),
+			"language_code":         aws.StringValue(cfg[i].LanguageCode),
+			"language_description":  aws.StringValue(cfg[i].LanguageDescription),
+		}
+		results = append(results, m)
+	}
+	return results
+}
+
+func flattenMediaConvertOutputSettings(cfg *mediaconvert.OutputSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"hls_settings": flattenMediaConvertHlsSettings(cfg.HlsSettings),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertHlsSettings(cfg *mediaconvert.HlsSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"audio_group_id":       aws.StringValue(cfg.AudioGroupId),
+		"audio_only_container": aws.StringValue(cfg.AudioOnlyContainer),
+		"audio_rendition_sets": aws.StringValue(cfg.AudioRenditionSets),
+		"audio_track_type":     aws.StringValue(cfg.AudioTrackType),
+		"iframe_only_manifest": aws.StringValue(cfg.IFrameOnlyManifest),
+		"segment_modifier":     aws.StringValue(cfg.SegmentModifier),
+	}
+	return []interface{}{m}
+}
+
+// func flattenMediaConvert---(cfg *mediaconvert.---) []interface{} {
+// 	if cfg == nil {
+// 		return []interface{}{}
+// 	}
+// 	m := map[string]interface{}{
+// 		"breakout_code":  aws.Int64Value(cfg.BreakoutCode),
+// 		"distributor_id": aws.StringValue(cfg.DistributorId),
+// 	}
+// 	return []interface{}{m}
+// }
