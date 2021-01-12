@@ -148,7 +148,7 @@ func expandMediaConvertVideoPreprocessor(list []interface{}) *mediaconvert.Video
 	if v, ok := tfMap["noise_reducer"]; ok {
 		result.NoiseReducer = expandMediaConvertNoiseReducer(v.([]interface{}))
 	}
-	if v, ok := tfMap["partner_watermaking"]; ok {
+	if v, ok := tfMap["partner_watermarking"]; ok {
 		result.PartnerWatermarking = expandMediaConvertPartnerWatermarking(v.([]interface{}))
 	}
 	if v, ok := tfMap["timecode_burnin"]; ok {
@@ -1706,13 +1706,13 @@ func flattenMediaConvertVideoPreprocessor(cfg *mediaconvert.VideoPreprocessor) [
 		return []interface{}{}
 	}
 	m := map[string]interface{}{
-		"color_corrector":     flattenMediaConvertColorCorrector(cfg.ColorCorrector),
-		"deinterlacer":        flattenMediaConvertDeinterlacer(cfg.Deinterlacer),
-		"dolby_vision":        flattenMediaConvertDolbyVision(cfg.DolbyVision),
-		"image_inserter":      flattenMediaConvertImageInserter(cfg.ImageInserter),
-		"noise_reducer":       flattenMediaConvertNoiseReducer(cfg.NoiseReducer),
-		"partner_watermaking": flattenMediaConvertPartnerWatermarking(cfg.PartnerWatermarking),
-		"timecode_burnin":     flattenMediaConvertTimecodeBurnin(cfg.TimecodeBurnin),
+		"color_corrector":      flattenMediaConvertColorCorrector(cfg.ColorCorrector),
+		"deinterlacer":         flattenMediaConvertDeinterlacer(cfg.Deinterlacer),
+		"dolby_vision":         flattenMediaConvertDolbyVision(cfg.DolbyVision),
+		"image_inserter":       flattenMediaConvertImageInserter(cfg.ImageInserter),
+		"noise_reducer":        flattenMediaConvertNoiseReducer(cfg.NoiseReducer),
+		"partner_watermarking": flattenMediaConvertPartnerWatermarking(cfg.PartnerWatermarking),
+		"timecode_burnin":      flattenMediaConvertTimecodeBurnin(cfg.TimecodeBurnin),
 	}
 	return []interface{}{m}
 }
@@ -2117,16 +2117,24 @@ func flattenMediaConvertNoiseReducerTemporalFilterSettings(cfg *mediaconvert.Noi
 }
 
 func flattenMediaConvertPartnerWatermarking(cfg *mediaconvert.PartnerWatermarking) []interface{} {
-	if cfg == nil && cfg.NexguardFileMarkerSettings != nil {
+	if cfg == nil {
 		return []interface{}{}
 	}
 	m := map[string]interface{}{
-		"nexguard_file_marker_settings": map[string]interface{}{
-			"license":  aws.StringValue(cfg.NexguardFileMarkerSettings.License),
-			"payload":  aws.Int64Value(cfg.NexguardFileMarkerSettings.Payload),
-			"preset":   aws.StringValue(cfg.NexguardFileMarkerSettings.Preset),
-			"strength": aws.StringValue(cfg.NexguardFileMarkerSettings.Strength),
-		},
+		"nexguard_file_marker_settings": flattenMediaConvertNexGuardFileMarkerSettings(cfg.NexguardFileMarkerSettings),
+	}
+	return []interface{}{m}
+}
+
+func flattenMediaConvertNexGuardFileMarkerSettings(cfg *mediaconvert.NexGuardFileMarkerSettings) []interface{} {
+	if cfg == nil {
+		return []interface{}{}
+	}
+	m := map[string]interface{}{
+		"license":  aws.StringValue(cfg.License),
+		"payload":  aws.Int64Value(cfg.Payload),
+		"preset":   aws.StringValue(cfg.Preset),
+		"strength": aws.StringValue(cfg.Strength),
 	}
 	return []interface{}{m}
 }

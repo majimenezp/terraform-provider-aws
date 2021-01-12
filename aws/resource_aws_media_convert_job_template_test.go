@@ -147,23 +147,40 @@ func TestAccAwsMediaConvertJobTemplate_Complex(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", rName),
 					resource.TestCheckResourceAttr(resourceName, "status_update_interval", "SECONDS_420"),
 					resource.TestCheckResourceAttr(resourceName, "settings.#", "1"),
-					// resource.TestCheckTypeSetElemNestedAttrs(resourceName, "settings.*", map[string]string{
-					// 	"input.#":                                    "1",
-					// 	"output_group.#":                             "1",
-					// 	"input.0.audio_selector.#":                   "1",
-					// 	"input.0.video_selector.#":                   "1",
-					// 	"input.0.psi_control":                        "USE_PSI",
-					// 	"input.0.timecode_source":                    "EMBEDDED",
-					// 	"input.0.audio_selector.0.name":              "Audio Selector 1",
-					// 	"input.0.audio_selector.0.default_selection": "DEFAULT",
-					// 	"input.0.audio_selector.0.program_selection": "1",
-					// 	"input.0.video_selector.0.alpha_behavior":    "DISCARD",
-					// 	"input.0.video_selector.0.color_space":       "FOLLOW",
-					// 	"input.0.video_selector.0.rotate":            "DEGREE_0",
-					// 	"output_group.0.output.#":                    "2",
-					// 	"output_group.0.output.0.preset":             "MP4",
-					// 	"output_group.0.output.1.preset":             "Framecapture",
-					// }),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "settings.*", map[string]string{
+						"input.#":                                                  "1",
+						"output_group.#":                                           "1",
+						"input.0.input_clipping.#":                                 "1",
+						"input.0.audio_selector.#":                                 "1",
+						"input.0.video_selector.#":                                 "1",
+						"input.0.caption_selector.#":                               "1",
+						"output_group.0.output.#":                                  "3",
+						"output_group.0.output.0.preset":                           "MP4",
+						"output_group.0.output.1.preset":                           "Framecapture",
+						"input.0.program_number":                                   "1",
+						"input.0.filter_enable":                                    "FORCE",
+						"input.0.psi_control":                                      "IGNORE_PSI",
+						"input.0.timecode_source":                                  "ZEROBASED",
+						"input.0.input_scan_type":                                  "AUTO",
+						"input.0.deblock_filter":                                   "ENABLED",
+						"input.0.denoise_filter":                                   "ENABLED",
+						"input.0.audio_selector.0.name":                            "Audio Selector 1",
+						"input.0.audio_selector.0.default_selection":               "DEFAULT",
+						"input.0.audio_selector.0.selector_type":                   "PID",
+						"input.0.audio_selector.0.program_selection":               "1",
+						"input.0.audio_selector.0.offset":                          "0",
+						"input.0.video_selector.0.color_space":                     "REC_601",
+						"input.0.video_selector.0.rotate":                          "DEGREES_90",
+						"input.0.video_selector.0.alpha_behavior":                  "REMAP_TO_LUMA",
+						"input.0.video_selector.0.color_space_usage":               "FALLBACK",
+						"input.0.caption_selector.0.name":                          "Captions Selector 1",
+						"input.0.caption_selector.0.source_settings.0.source_type": "SCTE20",
+						"input.0.caption_selector.0.source_settings.0.embedded_source_settings.0.convert_608_to_708":        "UPCONVERT",
+						"input.0.caption_selector.0.source_settings.0.embedded_source_settings.0.source_608_channel_number": "1",
+						"input.0.caption_selector.0.source_settings.0.embedded_source_settings.0.source_608_track_number":   "1",
+						"input.0.caption_selector.0.source_settings.0.embedded_source_settings.0.terminate_captions":        "END_OF_INPUT",
+						"input.0.input_clipping.0.end_timecode":                                                             "00:00:15:00",
+					}),
 				),
 			},
 			{
@@ -614,13 +631,13 @@ func testAccMediaConvertJobTemplateConfig_Complex(rName string) string {
 					file_group_settings {
 						destination_settings {
 							s3_settings {
+								access_control {
+									canned_acl = "AUTHENTICATED_READ"
+								}
 								encryption {
 									encryption_type = "SERVER_SIDE_ENCRYPTION_S3"
 								}
-							}
-							access_control {
-								canned_acl = "AUTHENTICATED_READ"
-							}
+							}							
 						}
 					}					
 				}
@@ -628,6 +645,7 @@ func testAccMediaConvertJobTemplateConfig_Complex(rName string) string {
 			}
 			motion_image_inserter {
 				input = "s3://jive-video-upload-us-east-1-iac/testimage_000.png"
+				insertion_mode = "PNG"
 				start_time = "00:00:05:00"
 				playback = "ONCE"
 				framerate {

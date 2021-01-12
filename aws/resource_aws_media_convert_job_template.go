@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"encoding/json"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/mediaconvert"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -560,7 +558,7 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 											},
 										},
 									},
-									"input_clippings": {
+									"input_clipping": {
 										Type:     schema.TypeList,
 										Optional: true,
 										Elem: &schema.Resource{
@@ -1843,7 +1841,7 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 																		"algorithm": {
 																			Type:         schema.TypeString,
 																			Optional:     true,
-																			ValidateFunc: validation.StringInSlice(mediaconvert.AudioChannelTag_Values(), false),
+																			ValidateFunc: validation.StringInSlice(mediaconvert.AudioNormalizationAlgorithm_Values(), false),
 																		},
 																		"algorithm_control": {
 																			Type:         schema.TypeString,
@@ -5019,12 +5017,6 @@ func resourceAwsMediaConvertJobTemplateCreate(d *schema.ResourceData, meta inter
 
 	resp, err := conn.CreateJobTemplate(input)
 	if err != nil {
-		fmt.Println("+++++++++++++++++++++++++++++++++++++++++")
-		strA, _ := json.Marshal(resp)
-		fmt.Println(string(strA))
-		strB, _ := json.Marshal(input)
-		fmt.Println(string(strB))
-		fmt.Println("+++++++++++++++++++++++++++++++++++++++++")
 		return fmt.Errorf("Error creating Media Convert Job Template: %s", err)
 	}
 	d.SetId(aws.StringValue(resp.JobTemplate.Name))
@@ -5069,7 +5061,6 @@ func expandMediaConvertJobTemplateSettings(list []interface{}) *mediaconvert.Job
 	if v, ok := tfMap["timed_metadata_insertion"]; ok {
 		result.TimedMetadataInsertion = expandMediaConvertTimedMetadataInsertion(v.([]interface{}))
 	}
-	fmt.Println(tfMap)
 	return result
 }
 
