@@ -241,11 +241,12 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 																						Optional: true,
 																						Elem:     &schema.Schema{Type: schema.TypeInt},
 																					},
-																					"input_channels_fine_tune": {
-																						Type:     schema.TypeSet,
-																						Optional: true,
-																						Elem:     &schema.Schema{Type: schema.TypeFloat},
-																					},
+																					// Curent AWS SDK v1.36.19 do not support it
+																					// "input_channels_fine_tune": {
+																					// 	Type:     schema.TypeSet,
+																					// 	Optional: true,
+																					// 	Elem:     &schema.Schema{Type: schema.TypeFloat},
+																					// },
 																				},
 																			},
 																		},
@@ -6543,9 +6544,10 @@ func expandMediaConvertOutputChannelMapping(list []interface{}) []*mediaconvert.
 		if v, ok := tfMap["input_channels"].(*schema.Set); ok && v.Len() > 0 {
 			result.InputChannels = expandInt64Set(v)
 		}
-		if v, ok := tfMap["input_channels_fine_tune"].(*schema.Set); ok && v.Len() > 0 {
-			result.InputChannelsFineTune = expandFloat64Set(v)
-		}
+		// Curent AWS SDK v1.36.19 do not support it
+		// if v, ok := tfMap["input_channels_fine_tune"].(*schema.Set); ok && v.Len() > 0 {
+		// 	result.InputChannelsFineTune = expandFloat64Set(v)
+		// }
 		results = append(results, result)
 	}
 	return results

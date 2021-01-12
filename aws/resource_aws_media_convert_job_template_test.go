@@ -649,14 +649,7 @@ func testAccMediaConvertJobTemplateConfig_Complex(rName string) string {
 					default_selection = "DEFAULT"
 					selector_type = "PID"
 					offset = 0						
-					program_selection = 1
-					remix_settings {
-						channel_mapping {
-							output_channel {
-								input_channels_fine_tune = [2,2]
-							}
-						}
-					}
+					program_selection = 1					
 				}
 				video_selector {
 					color_space = "REC_601"
