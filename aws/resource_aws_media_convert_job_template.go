@@ -6091,7 +6091,7 @@ func expandMediaConvertInputTemplate(list []interface{}) []*mediaconvert.InputTe
 		if v, ok := tfMap["image_inserter"]; ok {
 			result.ImageInserter = expandMediaConvertImageInserter(v.([]interface{}))
 		}
-		if v, ok := tfMap["input_clippings"]; ok {
+		if v, ok := tfMap["input_clipping"]; ok {
 			result.InputClippings = expandMediaConvertInputClipping(v.([]interface{}))
 		}
 		if v, ok := tfMap["input_scan_type"].(string); ok && v != "" {
@@ -6543,9 +6543,9 @@ func expandMediaConvertOutputChannelMapping(list []interface{}) []*mediaconvert.
 		if v, ok := tfMap["input_channels"].(*schema.Set); ok && v.Len() > 0 {
 			result.InputChannels = expandInt64Set(v)
 		}
-		// if v, ok := tfMap["input_channels_fine_tune"].(*schema.Set); ok && v.Len() > 0 {
-		// 	result.InputChannelsFineTune = expandFloat64Set(v)
-		// }
+		if v, ok := tfMap["input_channels_fine_tune"].(*schema.Set); ok && v.Len() > 0 {
+			result.InputChannelsFineTune = expandFloat64Set(v)
+		}
 		results = append(results, result)
 	}
 	return results
@@ -7767,7 +7767,7 @@ func flattenMediaConvertInputTemplate(cfg []*mediaconvert.InputTemplate) []inter
 			"filter_enable":        aws.StringValue(cfg[i].FilterEnable),
 			"filter_strength":      aws.Int64Value(cfg[i].FilterStrength),
 			"image_inserter":       flattenMediaConvertImageInserter(cfg[i].ImageInserter),
-			"input_clippings":      flattenMediaConvertInputClipping(cfg[i].InputClippings),
+			"input_clipping":       flattenMediaConvertInputClipping(cfg[i].InputClippings),
 			"input_scan_type":      aws.StringValue(cfg[i].InputScanType),
 			"position":             flattenMediaConvertRectangle(cfg[i].Position),
 			"program_number":       aws.Int64Value(cfg[i].ProgramNumber),

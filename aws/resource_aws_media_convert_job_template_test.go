@@ -88,7 +88,7 @@ func TestAccAwsMediaConvertJobTemplate_base(t *testing.T) {
 func TestAccAwsMediaConvertJobTemplate_BasicMP4(t *testing.T) {
 	var jobTemplate mediaconvert.JobTemplate
 	resourceName := "aws_media_convert_job_template.test"
-	rName := acctest.RandomWithPrefix("tf-acc-test-base")
+	rName := acctest.RandomWithPrefix("tf-acc-test-mp4")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t); testAccPreCheckAWSMediaConvert(t) },
 		Providers:    testAccProviders,
@@ -119,6 +119,51 @@ func TestAccAwsMediaConvertJobTemplate_BasicMP4(t *testing.T) {
 						"output_group.0.output.0.preset":             "MP4",
 						"output_group.0.output.1.preset":             "Framecapture",
 					}),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccAwsMediaConvertJobTemplate_Complex(t *testing.T) {
+	var jobTemplate mediaconvert.JobTemplate
+	resourceName := "aws_media_convert_job_template.test"
+	rName := acctest.RandomWithPrefix("tf-acc-test-complex")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t); testAccPreCheckAWSMediaConvert(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAwsMediaConvertJobTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMediaConvertJobTemplateConfig_Complex(rName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAwsMediaConvertJobTemplateExists(resourceName, &jobTemplate),
+					testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`jobTemplates/.+`)),
+					resource.TestCheckResourceAttr(resourceName, "name", rName),
+					resource.TestCheckResourceAttr(resourceName, "status_update_interval", "SECONDS_420"),
+					resource.TestCheckResourceAttr(resourceName, "settings.#", "1"),
+					// resource.TestCheckTypeSetElemNestedAttrs(resourceName, "settings.*", map[string]string{
+					// 	"input.#":                                    "1",
+					// 	"output_group.#":                             "1",
+					// 	"input.0.audio_selector.#":                   "1",
+					// 	"input.0.video_selector.#":                   "1",
+					// 	"input.0.psi_control":                        "USE_PSI",
+					// 	"input.0.timecode_source":                    "EMBEDDED",
+					// 	"input.0.audio_selector.0.name":              "Audio Selector 1",
+					// 	"input.0.audio_selector.0.default_selection": "DEFAULT",
+					// 	"input.0.audio_selector.0.program_selection": "1",
+					// 	"input.0.video_selector.0.alpha_behavior":    "DISCARD",
+					// 	"input.0.video_selector.0.color_space":       "FOLLOW",
+					// 	"input.0.video_selector.0.rotate":            "DEGREE_0",
+					// 	"output_group.0.output.#":                    "2",
+					// 	"output_group.0.output.0.preset":             "MP4",
+					// 	"output_group.0.output.1.preset":             "Framecapture",
+					// }),
 				),
 			},
 			{
@@ -594,26 +639,66 @@ func testAccMediaConvertJobTemplateConfig_Complex(rName string) string {
 					image_y = 0
 				}
 			}
-			input {					
-					audio_selector {
-						name = "Audio Selector 1"
-						default_selection = "DEFAULT"
-						offset = 0
-						program_selection = 1
-					}										        
-					deblock_filter = "DISABLED"
-					denoise_filter = "DISABLED"
-					filter_enable = "AUTO"
-					filter_strength = 0
-					psi_control = "USE_PSI"
-					timecode_source = "EMBEDDED"
-					video_selector {
-						alpha_behavior = "DISCARD"
-						color_space = "FOLLOW"
-						rotate = "DEGREE_0"
+			input {
+				input_clipping {
+					end_timecode = "00:00:15:00"
+					start_timecode = "00:00:10:00"
+				}
+				audio_selector {
+					name = "Audio Selector 1"
+					default_selection = "DEFAULT"
+					selector_type = "PID"
+					offset = 0						
+					program_selection = 1
+					remix_settings {
+						channel_mapping {
+							output_channel {
+								input_channels_fine_tune = [2,2]
+							}
+						}
 					}
+				}
+				video_selector {
+					color_space = "REC_601"
+					rotate = "DEGREES_90"
+					pid = 1
+					program_number = 0					
+					alpha_behavior = "REMAP_TO_LUMA"
+					color_space_usage = "FALLBACK"
+				}
+				caption_selector {
+					name = "Captions Selector 1"
+					source_settings {
+						source_type = "SCTE20"
+						embedded_source_settings {
+							source_608_channel_number = 1
+							source_608_track_number = 1
+							convert_608_to_708 = "UPCONVERT"
+							terminate_captions = "END_OF_INPUT"
+						}
+					}
+				}
+				program_number = 1
+				filter_enable = "FORCE"
+				psi_control = "IGNORE_PSI"
+				filter_strength = 5
+				deblock_filter = "ENABLED"
+				denoise_filter = "ENABLED"				
+				input_scan_type = "AUTO"
+				timecode_source = "ZEROBASED"
+				crop {
+					height = 600
+					width = 1000
+					x = 100
+					y = 10
+				}
+				position {
+					height = 600
+					width = 1000
+					x = 100
+					y = 10
+				}
 			}
-			
 		}		
 	}
 	`, rName)
