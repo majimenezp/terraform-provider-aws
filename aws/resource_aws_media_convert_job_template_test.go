@@ -85,6 +85,51 @@ func TestAccAwsMediaConvertJobTemplate_base(t *testing.T) {
 	})
 }
 
+func TestAccAwsMediaConvertJobTemplate_BasicMP4(t *testing.T) {
+	var jobTemplate mediaconvert.JobTemplate
+	resourceName := "aws_media_convert_job_template.test"
+	rName := acctest.RandomWithPrefix("tf-acc-test-base")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t); testAccPreCheckAWSMediaConvert(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAwsMediaConvertJobTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMediaConvertJobTemplateConfig_BasicMP4(rName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAwsMediaConvertJobTemplateExists(resourceName, &jobTemplate),
+					testAccMatchResourceAttrRegionalARN(resourceName, "arn", "mediaconvert", regexp.MustCompile(`jobTemplates/.+`)),
+					resource.TestCheckResourceAttr(resourceName, "name", rName),
+					resource.TestCheckResourceAttr(resourceName, "status_update_interval", "SECONDS_60"),
+					resource.TestCheckResourceAttr(resourceName, "settings.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "settings.*", map[string]string{
+						"input.#":                                    "1",
+						"output_group.#":                             "1",
+						"input.0.audio_selector.#":                   "1",
+						"input.0.video_selector.#":                   "1",
+						"input.0.psi_control":                        "USE_PSI",
+						"input.0.timecode_source":                    "EMBEDDED",
+						"input.0.audio_selector.0.name":              "Audio Selector 1",
+						"input.0.audio_selector.0.default_selection": "DEFAULT",
+						"input.0.audio_selector.0.program_selection": "1",
+						"input.0.video_selector.0.alpha_behavior":    "DISCARD",
+						"input.0.video_selector.0.color_space":       "FOLLOW",
+						"input.0.video_selector.0.rotate":            "DEGREE_0",
+						"output_group.0.output.#":                    "2",
+						"output_group.0.output.0.preset":             "MP4",
+						"output_group.0.output.1.preset":             "Framecapture",
+					}),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func testAccMediaConvertJobTemplateConfig_Basic(rName string) string {
 	return fmt.Sprintf(`
 	resource "aws_media_convert_job_template" "test" {
@@ -331,6 +376,245 @@ func testAccMediaConvertJobTemplateConfig_BasicUpdate(rName string) string {
 			}
 		}
 		status_update_interval = "SECONDS_300"
+	}
+	`, rName)
+}
+
+func testAccMediaConvertJobTemplateConfig_BasicMP4(rName string) string {
+	return fmt.Sprintf(`
+	resource "aws_media_convert_job_template" "test" {
+		name = %[1]q
+		description = "test MP4 job template"
+		acceleration_settings {
+			mode = "DISABLED"
+		}
+		priority = 0
+		queue = "arn:aws:mediaconvert:us-east-1:583161073698:queues/jive-cloud-queue"
+		status_update_interval = "SECONDS_60"
+		settings {
+			ad_avail_offset = 0
+			input {					
+					audio_selector {
+						name = "Audio Selector 1"
+						default_selection = "DEFAULT"
+						offset = 0
+						program_selection = 1
+					}										        
+					deblock_filter = "DISABLED"
+					denoise_filter = "DISABLED"
+					filter_enable = "AUTO"
+					filter_strength = 0
+					psi_control = "USE_PSI"
+					timecode_source = "EMBEDDED"
+					video_selector {
+						alpha_behavior = "DISCARD"
+						color_space = "FOLLOW"
+						rotate = "DEGREE_0"
+					}
+			}
+			output_group {
+				name = "File Group"
+				output_group_settings {
+					type = "FILE_GROUP_SETTINGS"
+					file_group_settings {
+						destination_settings {
+							s3_settings {
+								encryption {
+									encryption_type = "SERVER_SIDE_ENCRYPTION_S3"
+								}
+							}
+						}
+					}					
+				}
+				output {
+					preset = "MP4"
+				}
+				output {
+					preset = "Framecapture"
+				}
+			}
+		}
+		
+	}
+	`, rName)
+}
+
+func testAccMediaConvertJobTemplateConfig_Complex(rName string) string {
+	return fmt.Sprintf(`
+	resource "aws_media_convert_job_template" "test" {
+		name = %[1]q
+		description = "test complex  job template"
+		acceleration_settings {
+			mode = "PREFERRED"
+		}
+		priority = 0
+		queue = "arn:aws:mediaconvert:us-east-1:583161073698:queues/Default"
+		status_update_interval = "SECONDS_420"
+		hop_destinations {
+			wait_minutes = 10
+			queue = "arn:aws:mediaconvert:us-east-1:583161073698:queues/jive-cloud-queue"
+			priority = 0
+		}
+		settings {
+			ad_avail_offset = 0
+			timecode_config {
+				source = "ZEROBASED"
+			}
+			output_group {
+				name = "File Group"
+				custom_name = "test group 01"
+				output {
+					preset = "MP4"
+					name_modifier = "H264Video"
+				}
+				output {
+					preset = "Framecapture"
+					name_modifier = "JPEGVideo"
+				}
+				output {
+					name_modifier = "Test1"
+					container_settings {
+						container = "MP4"
+						mp4_settings {
+							cslg_atom = "INCLUDE"
+							ctts_version = 0
+							free_space_box = "EXCLUDE"
+							moov_placement = "PROGRESSIVE_DOWNLOAD"
+							audio_duration = "DEFAULT_CODEC_DURATION"
+						}
+					}
+					video_description {
+						width = 320
+						scaling_behavior = "STRETCH_TO_OUTPUT"
+						height = 240
+						timecode_insertion = "DISABLED"
+						anti_alias = "ENABLED"
+						sharpness = 50
+						drop_frame_timecode = "ENABLED"
+						color_metadata = "INSERT"
+						video_preprocessors {
+							color_corrector {
+								brightness = 60
+								color_space_conversion = "FORCE_601"
+								contrast = 55
+								hue = 0
+								saturation = 50
+							}
+							deinterlacer {
+								algorithm = "BLEND"
+								control = "FORCE_ALL_FRAMES"
+								mode = "ADAPTIVE"
+							}
+							noise_reducer {
+								filter = "MEAN"
+								filter_settings {
+									strength = 1
+								}
+							}
+							timecode_burnin {
+								font_size = 16
+								position = "MIDDLE_CENTER"
+								prefix = "test"
+							}
+						}
+						codec_settings {
+							codec = "AV1"
+							av1_settings {
+								gop_size = 81
+								number_b_frames_between_reference_frames = 15
+								slices = 1
+								rate_control_mode = "QVBR"
+								max_bitrate = 6000000
+								adaptive_quantization = "HIGHER"
+								spatial_adaptive_quantization = "ENABLED"
+								framerate_control = "SPECIFIED"
+								framerate_conversion_algorithm = "INTERPOLATE"
+								framerate_numerator = 24000
+								framerate_denominator = 1001
+								qvbr_settings {
+									qvbr_quality_level = 3
+									qvbr_quality_level_fine_tune = 0.33
+								}
+							}
+						}
+					}
+					audio_description {
+						audio_type_control = "FOLLOW_INPUT"
+						audio_source_name = "Audio Selector 1"
+						stream_name = "main"
+						language_code_control = "FOLLOW_INPUT"
+						language_code = "ENG"
+						audio_normalization_settings {
+							algorithm = "ITU_BS_1770_1"
+							algorithm_control = "CORRECT_AUDIO"
+							correction_gate_level = -70
+							loudness_logging = "LOG"
+							peak_calculation = "NONE"
+						}
+						codec_settings {
+							codec = "AC3"
+							ac3_settings {
+								bitrate = 128000
+								bitstream_mode = "EMERGENCY"
+								coding_mode = "CODING_MODE_1_1"
+								dynamic_range_compression_profile = "FILM_STANDARD"
+								metadata_control = "FOLLOW_INPUT"
+								sample_rate = 48000
+							} 
+						}
+					}
+				}
+				output_group_settings {
+					type = "FILE_GROUP_SETTINGS"
+					file_group_settings {
+						destination_settings {
+							s3_settings {
+								encryption {
+									encryption_type = "SERVER_SIDE_ENCRYPTION_S3"
+								}
+							}
+							access_control {
+								canned_acl = "AUTHENTICATED_READ"
+							}
+						}
+					}					
+				}
+				
+			}
+			motion_image_inserter {
+				input = "s3://jive-video-upload-us-east-1-iac/testimage_000.png"
+				start_time = "00:00:05:00"
+				playback = "ONCE"
+				framerate {
+					framerate_denominator = 1
+					framerate_numerator = 1
+				}
+				offset {
+					image_x = 0
+					image_y = 0
+				}
+			}
+			input {					
+					audio_selector {
+						name = "Audio Selector 1"
+						default_selection = "DEFAULT"
+						offset = 0
+						program_selection = 1
+					}										        
+					deblock_filter = "DISABLED"
+					denoise_filter = "DISABLED"
+					filter_enable = "AUTO"
+					filter_strength = 0
+					psi_control = "USE_PSI"
+					timecode_source = "EMBEDDED"
+					video_selector {
+						alpha_behavior = "DISCARD"
+						color_space = "FOLLOW"
+						rotate = "DEGREE_0"
+					}
+			}
+			
+		}		
 	}
 	`, rName)
 }

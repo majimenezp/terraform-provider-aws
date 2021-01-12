@@ -4937,6 +4937,50 @@ func resourceAwsMediaConvertJobTemplateUpdate(d *schema.ResourceData, meta inter
 		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
 	}
 	log.Printf("[INFO] Updating MediaConvert Job Template: %s", d.Get("name").(string))
+	if d.HasChanges("description", "priority", "queue", "status_update_interval", "acceleration_settings", "hop_destinations", "settings") {
+		updateOpts := &mediaconvert.UpdateJobTemplateInput{
+			Name: aws.String(d.Id()),
+		}
+		if v, ok := d.GetOk("description"); ok {
+			updateOpts.Description = aws.String(v.(string))
+		}
+		if v, ok := d.GetOk("priority"); ok {
+			updateOpts.Description = aws.String(v.(string))
+		}
+		if v, ok := d.GetOk("queue"); ok {
+			updateOpts.Queue = aws.String(v.(string))
+		}
+		if v, ok := d.GetOk("status_update_interval"); ok {
+			updateOpts.StatusUpdateInterval = aws.String(v.(string))
+		}
+		if v, ok := d.GetOk("acceleration_settings"); ok {
+			accelerationSettings := v.([]interface{})
+			updateOpts.AccelerationSettings = expandMediaConvertJobTemplateAccelerationSettings(accelerationSettings)
+		}
+		if v, ok := d.GetOk("hop_destinations"); ok {
+			hopDestinations := v.([]interface{})
+			updateOpts.HopDestinations = expandMediaConvertJobTemplateHopDestinations(hopDestinations)
+		}
+		if v, ok := d.GetOk("settings"); ok {
+			settings := v.([]interface{})
+			updateOpts.Settings = expandMediaConvertJobTemplateSettings(settings)
+		}
+		_, err = conn.UpdateJobTemplate(updateOpts)
+		if isAWSErr(err, mediaconvert.ErrCodeNotFoundException, "") {
+			log.Printf("[WARN] Media Convert Job Template (%s) not found, removing from state", d.Id())
+			d.SetId("")
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("Error updating Media Convert Job template: %s", err)
+		}
+	}
+	if d.HasChange("tags") {
+		o, n := d.GetChange("tags")
+		if err := keyvaluetags.MediaconvertUpdateTags(conn, d.Get("arn").(string), o, n); err != nil {
+			return fmt.Errorf("error updating tags: %s", err)
+		}
+	}
 	return resourceAwsMediaConvertJobTemplateRead(d, meta)
 }
 
