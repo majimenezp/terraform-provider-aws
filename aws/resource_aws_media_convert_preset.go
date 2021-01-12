@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -3910,13 +3909,6 @@ func resourceAwsMediaConvertPresetCreate(d *schema.ResourceData, meta interface{
 		Tags:        keyvaluetags.New(d.Get("tags").(map[string]interface{})).IgnoreAws().MediaconvertTags(),
 	}
 	log.Printf("[DEBUG] Creating MediaConvert Preset: %s", input)
-	fmt.Println(input)
-	b, err := json.Marshal(input)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(string(b))
-
 	resp, err := conn.CreatePreset(input)
 	if err != nil {
 		return fmt.Errorf("Error creating Media Convert Preset: %s", err)
@@ -3982,9 +3974,6 @@ func resourceAwsMediaConvertPresetUpdate(d *schema.ResourceData, meta interface{
 			presetSettings := v.([]interface{})
 			updateOpts.Settings = expandMediaPresetSettings(presetSettings)
 		}
-		fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-		fmt.Println(updateOpts)
-		fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 		_, err = conn.UpdatePreset(updateOpts)
 		if isAWSErr(err, mediaconvert.ErrCodeNotFoundException, "") {
 			log.Printf("[WARN] Media Convert Preset (%s) not found, removing from state", d.Id())
@@ -3992,7 +3981,7 @@ func resourceAwsMediaConvertPresetUpdate(d *schema.ResourceData, meta interface{
 			return nil
 		}
 		if err != nil {
-			return fmt.Errorf("Error updating Media Convert Queue: %s", err)
+			return fmt.Errorf("Error updating Media Convert Preset: %s", err)
 		}
 	}
 
@@ -5593,20 +5582,34 @@ func expandMediaConvertCaptionDescription(list []interface{}) []*mediaconvert.Ca
 
 func expandMediaConvertCaptionDestinationSettings(list []interface{}) *mediaconvert.CaptionDestinationSettings {
 	result := &mediaconvert.CaptionDestinationSettings{}
-	if list == nil || len(list) == 0 {
-		return result
+	if len(list) == 0 || list[0] == nil {
+		return nil
 	}
 	tfMap := list[0].(map[string]interface{})
-	result.BurninDestinationSettings = expandMediaConvertBurninDestinationSettings(tfMap["burnin_destination_settings"].([]interface{}))
+	if v, ok := tfMap["burnin_destination_settings"]; ok {
+		result.BurninDestinationSettings = expandMediaConvertBurninDestinationSettings(v.([]interface{}))
+	}
 	if v, ok := tfMap["destination_type"].(string); ok && v != "" {
 		result.DestinationType = aws.String(v)
 	}
-	result.DvbSubDestinationSettings = expandMediaConvertDvbSubDestinationSettings(tfMap["dvb_sub_destination_settings"].([]interface{}))
-	result.EmbeddedDestinationSettings = expandMediaConvertEmbeddedDestinationSettings(tfMap["embedded_destination_settings"].([]interface{}))
-	result.ImscDestinationSettings = expandMediaConvertImscDestinationSettings(tfMap["imsc_destination_settings"].([]interface{}))
-	result.SccDestinationSettings = expandMediaConvertSccDestinationSettings(tfMap["scc_destination_settings"].([]interface{}))
-	result.TeletextDestinationSettings = expandMediaConvertTeletextDestinationSettings(tfMap["teletext_destination_settings"].([]interface{}))
-	result.TtmlDestinationSettings = expandMediaConvertTtmlDestinationSettings(tfMap["ttml_destination_settings"].([]interface{}))
+	if v, ok := tfMap["dvb_sub_destination_settings"]; ok {
+		result.DvbSubDestinationSettings = expandMediaConvertDvbSubDestinationSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["embedded_destination_settings "]; ok {
+		result.EmbeddedDestinationSettings = expandMediaConvertEmbeddedDestinationSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["imsc_destination_settings "]; ok {
+		result.ImscDestinationSettings = expandMediaConvertImscDestinationSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["scc_destination_settings "]; ok {
+		result.SccDestinationSettings = expandMediaConvertSccDestinationSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["teletext_destination_settings "]; ok {
+		result.TeletextDestinationSettings = expandMediaConvertTeletextDestinationSettings(v.([]interface{}))
+	}
+	if v, ok := tfMap["ttml_destination_settings "]; ok {
+		result.TtmlDestinationSettings = expandMediaConvertTtmlDestinationSettings(v.([]interface{}))
+	}
 	return result
 }
 
@@ -6246,7 +6249,7 @@ func flattenMediaConvertPresetSettings(presetSettings *mediaconvert.PresetSettin
 	}
 	m := map[string]interface{}{
 		"audio_description":   flattenMediaConvertAudioDescription(presetSettings.AudioDescriptions),
-		"caption_description": flattenMediaConvertCaptionDescriptions(presetSettings.CaptionDescriptions),
+		"caption_description": flattenMediaConvertCaptionDescriptionPreset(presetSettings.CaptionDescriptions),
 		"container_settings":  flattenMediaConvertContainerSettings(presetSettings.ContainerSettings),
 		"video_description":   flattenMediaConvertVideoDescription(presetSettings.VideoDescription),
 	}
@@ -6518,7 +6521,7 @@ func flattenMediaConvertOutputChannelMapping(cfg []*mediaconvert.OutputChannelMa
 	return ocResults
 }
 
-func flattenMediaConvertCaptionDescriptions(captionDescriptions []*mediaconvert.CaptionDescriptionPreset) []interface{} {
+func flattenMediaConvertCaptionDescriptionPreset(captionDescriptions []*mediaconvert.CaptionDescriptionPreset) []interface{} {
 	if captionDescriptions == nil {
 		return []interface{}{}
 	}
