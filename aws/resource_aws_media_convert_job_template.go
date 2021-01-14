@@ -4984,6 +4984,21 @@ func resourceAwsMediaConvertJobTemplateUpdate(d *schema.ResourceData, meta inter
 }
 
 func resourceAwsMediaConvertJobTemplateDelete(d *schema.ResourceData, meta interface{}) error {
+	conn, err := getAwsMediaConvertAccountClient(meta.(*AWSClient))
+	if err != nil {
+		return fmt.Errorf("Error getting Media Convert Account Client: %s", err)
+	}
+	delOpts := &mediaconvert.DeleteJobTemplateInput{
+		Name: aws.String(d.Id()),
+	}
+	_, err = conn.DeleteJobTemplate(delOpts)
+	if isAWSErr(err, mediaconvert.ErrCodeNotFoundException, "") {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("Error deleting Media Convert Job Template: %s", err)
+	}
+
 	return nil
 }
 
