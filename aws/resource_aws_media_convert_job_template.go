@@ -5322,7 +5322,9 @@ func expandMediaConvertCmafGroupSettings(list []interface{}) *mediaconvert.CmafG
 		result.ManifestDurationFormat = aws.String(v)
 	}
 	if v, ok := tfMap["min_buffer_time"].(int); ok {
-		result.MinBufferTime = aws.Int64(int64(v))
+		if v > 0 {
+			result.MinBufferTime = aws.Int64(int64(v))
+		}
 	}
 	if v, ok := tfMap["min_final_segment_length"].(float64); ok {
 		result.MinFinalSegmentLength = aws.Float64(float64(v))
@@ -5425,7 +5427,9 @@ func expandMediaConvertDashIsoGroupSettings(list []interface{}) *mediaconvert.Da
 		result.HbbtvCompliance = aws.String(v)
 	}
 	if v, ok := tfMap["min_buffer_time"].(int); ok {
-		result.MinBufferTime = aws.Int64(int64(v))
+		if v > 0 {
+			result.MinBufferTime = aws.Int64(int64(v))
+		}
 	}
 	if v, ok := tfMap["min_final_segment_length"].(float64); ok {
 		result.MinFinalSegmentLength = aws.Float64(float64(v))
