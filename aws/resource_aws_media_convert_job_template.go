@@ -610,7 +610,6 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 										Type:         schema.TypeInt,
 										Optional:     true,
 										ValidateFunc: validation.IntAtLeast(1),
-										Default:      1,
 									},
 									"psi_control": {
 										Type:         schema.TypeString,
@@ -651,7 +650,6 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 													Type:         schema.TypeInt,
 													Optional:     true,
 													ValidateFunc: validation.IntAtLeast(1),
-													Default:      1,
 												},
 												"program_number": {
 													Type:     schema.TypeInt,
@@ -2966,7 +2964,6 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 																		"program_number": {
 																			Type:     schema.TypeInt,
 																			Optional: true,
-																			Default:  1,
 																		},
 																		"rate_mode": {
 																			Type:         schema.TypeString,
