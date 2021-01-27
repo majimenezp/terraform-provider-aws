@@ -607,9 +607,8 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 										},
 									},
 									"program_number": {
-										Type:         schema.TypeInt,
-										Optional:     true,
-										ValidateFunc: validation.IntAtLeast(1),
+										Type:     schema.TypeInt,
+										Optional: true,
 									},
 									"psi_control": {
 										Type:         schema.TypeString,
@@ -647,9 +646,8 @@ func resourceAwsMediaConvertJobTemplate() *schema.Resource {
 													ValidateFunc: validation.StringInSlice(mediaconvert.ColorSpaceUsage_Values(), false),
 												},
 												"pid": {
-													Type:         schema.TypeInt,
-													Optional:     true,
-													ValidateFunc: validation.IntAtLeast(1),
+													Type:     schema.TypeInt,
+													Optional: true,
 												},
 												"program_number": {
 													Type:     schema.TypeInt,
