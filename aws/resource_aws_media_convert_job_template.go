@@ -6024,7 +6024,9 @@ func expandMediaConvertInputTemplate(list []interface{}) []*mediaconvert.InputTe
 			result.Position = expandMediaConvertRectangle(v.([]interface{}))
 		}
 		if v, ok := tfMap["program_number"].(int); ok {
-			result.ProgramNumber = aws.Int64(int64(v))
+			if v > 0 {
+				result.ProgramNumber = aws.Int64(int64(v))
+			}
 		}
 		if v, ok := tfMap["psi_control"].(string); ok && v != "" {
 			result.PsiControl = aws.String(v)
@@ -6059,10 +6061,14 @@ func expandMediaConvertVideoSelector(list []interface{}) *mediaconvert.VideoSele
 		result.ColorSpaceUsage = aws.String(v)
 	}
 	if v, ok := tfMap["pid"].(int); ok {
-		result.Pid = aws.Int64(int64(v))
+		if v > 0 {
+			result.Pid = aws.Int64(int64(v))
+		}
 	}
 	if v, ok := tfMap["program_number"].(int); ok {
-		result.ProgramNumber = aws.Int64(int64(v))
+		if v > 0 {
+			result.ProgramNumber = aws.Int64(int64(v))
+		}
 	}
 	if v, ok := tfMap["rotate"].(string); ok && v != "" {
 		result.Rotate = aws.String(v)
@@ -6245,7 +6251,9 @@ func expandMediaConvertDvbSubSourceSettings(list []interface{}) *mediaconvert.Dv
 	}
 	tfMap := list[0].(map[string]interface{})
 	if v, ok := tfMap["pid"].(int); ok {
-		result.Pid = aws.Int64(int64(v))
+		if v > 0 {
+			result.Pid = aws.Int64(int64(v))
+		}
 	}
 	return result
 }
